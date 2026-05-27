@@ -1,0 +1,8 @@
+namespace: ns-373
+resources:
+  - resources/01-secrets.yaml
+  - resources/02-storage.yaml
+  - resources/03-workloads.yaml
+  - resources/04-services.yaml
+  - resources/05-ingress.yaml
+  - resources/migration-notes.yaml

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservice-demo
+data:
+  notes.txt: |
+    - Converted Kompose-generated Pods to Deployments (stateless) and StatefulSets (stateful) due to docker-compose restart policies that resulted in bare Pods.
+    - Adjusted internal service addresses in environment variables (e.g., USER_ADDRESS, PROJECT_ADDRESS) to match Kubernetes Service ports specified in the architecture plan (user:8080, project:8081, task:8082, api:8083) instead of container ports.
+    - Added subPath configurations to volume mounts for databases (postgresql, mysql, mongo) to avoid 'lost+found' directory issues on freshly provisioned EBS volumes which crash some database initializations.
+    - Ignored local directory bindings from docker-compose warnings in favor of persistent volumes.
+    - Added standard liveness and readiness probes to stateful applications based on their docker-compose healthcheck definitions. Un-evidenced probes were omitted for stateless services.
+    - Allocated a baseline of 512Mi memory requests to all pods according to the sizing math.
+    - Set pod securityContext.fsGroup to 999 for databases to ensure EBS volume permissions correctly map to standard container non-root users.
+    - Docker Compose 'depends_on' behavior is omitted. Service initialization ordering is instead handled gracefully via CrashLoopBackOff and standard Restart Policies.
+    - Created an ALB Ingress for the api-gateway service to expose it to the internet over HTTP on port 80 routing to service port 9090.

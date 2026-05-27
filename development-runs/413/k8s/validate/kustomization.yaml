@@ -1,0 +1,4 @@
+namespace: ns-413
+resources:
+  - resources/app-manifests.yaml
+  - resources/migration-notes.yaml

@@ -1,0 +1,10 @@
+namespace: ns-583
+resources:
+  - resources/app-config.yaml
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/persistent-volume-claims.yaml
+  - resources/services.yaml
+  - resources/stateful-workloads.yaml
+  - resources/stateless-workloads.yaml

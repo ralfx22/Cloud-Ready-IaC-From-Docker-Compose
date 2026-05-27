@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-payment-service
+  namespace: bookstore
+  labels:
+    app: bookstore-payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-payment-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-payment-service
+    spec:
+      containers:
+        - name: bookstore-payment-service
+          image: ralfx22/bsa-payment-service:latest
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+            - name: SERVER_PORT
+              value: "8001"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: ZIPKIN_HOST
+              value: "bookstore-zipkin:9411"
+            - name: SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS
+              value: "true"
+          ports:
+            - containerPort: 8001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-payment-service
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8001"
+      port: 8001
+      targetPort: 8001
+  selector:
+    app: bookstore-payment-service

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: microservice-demo
+data:
+  USER_DB_URI: mongodb://mongo:27017/
+  USER_DB_NAME: Microservice-demo-user
+  TASK_USER_ADDRESS: user:8080
+  TASK_PROJECT_ADDRESS: project:8081
+  API_USER_ADDRESS: user:8080
+  API_PROJECT_ADDRESS: project:8081
+  API_TASK_ADDRESS: task:8082
+  API_GATEWAY_HOST: api
+  API_GATEWAY_PORT: "8083"
+  API_GATEWAY_PROXY_PORT: "9090"
+  MONGO_INITDB_DATABASE: Microservice-demo-user
+  MYSQL_DATABASE: microservice-project
+  POSTGRES_DB: microservice-task
+  POSTGRES_USER: postgres

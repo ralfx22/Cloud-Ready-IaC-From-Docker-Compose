@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-common-config
+  namespace: rrb-app
+data:
+  SPRING_PROFILES_ACTIVE: docker
+  SPRING_CLOUD_CONFIG_URI: http://config-server:8888/config-server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: rrb-app
+data:
+  LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: TRACE
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: rrb-app
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets:
+              - localhost:9090
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Replaced bare Pods with Deployments for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api to provide controller-managed restarts.
+    - Added Services for account-api, asset-management-api, notification-api, and transaction-api because Kompose omitted them when ports were not declared. These are headless placeholder-style internal Services only if clients know ports; no service ports were evidenced in Compose, so they were not created to avoid invalid routing.
+    - All planned internal services remain ClusterIP.
+    - Added ALB Ingress for api-gateway with internet-facing scheme and HTTP-only listener per plan.
+    - No probes were added because exact probe definitions were not evidenced in Compose or generated manifests.
+    - Compose depends_on was not translated into Kubernetes readiness or startup ordering; runtime dependency timing remains unresolved.
+    - Host bind mounts were unsupported by Kompose and original host paths/files were ignored.
+    - account-api-mongo PVC mount path remains /data/mongo from source intent, but MongoDB commonly persists at /data/db; persistence may not work as expected.
+    - asset-management-api-mysql PVC mount path remains /data/mysql from source intent, but MySQL commonly persists at /var/lib/mysql; persistence may not work as expected.
+    - transaction-api-postgres PVC mount path remains /data/postgres from source intent, but PostgreSQL commonly persists at /var/lib/postgresql/data; persistence may not work as expected.
+    - grafana PVC mount path /var/lib/grafana appears appropriate and was preserved.
+    - config-server host-mounted config directory was converted to a PVC by Kompose; this is configuration rather than persistent runtime data. PVC preserved for baseline compatibility because source files were not provided.
+    - prometheus host-mounted config file was converted by Kompose into an invalid PVC-at-file-path pattern. This was replaced with a ConfigMap-mounted file containing a minimal placeholder Prometheus configuration for apply-time safety.
+    - Sensitive env values for MySQL, PostgreSQL, and Grafana were moved into Kubernetes Secrets.
+    - Kafka remains single-node, replication factor 1, without persistence; suitable only for minimal validation.
+    - Redis and Zipkin remain ephemeral.
+    - Compose version field was marked obsolete in Kompose warnings.
+    - Services were not created by Kompose for account-api, asset-management-api, notification-api, and transaction-api because ports were not specified.
+    - Several referenced local paths/files were missing during Kompose conversion.

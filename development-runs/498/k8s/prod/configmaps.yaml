@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: rrb-app
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets: ['localhost:9090']
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - All Services are internal ClusterIP; public validation entrypoint is an ALB-backed Ingress to api-gateway:8080.
+    - No probes were added because no exact probe definitions were evidenced in the inputs.
+    - account-api, asset-management-api, notification-api, and transaction-api remain naked Pods because Kompose generated Pods only and the plan explicitly avoids inventing additional Services for workloads missing declared ports.
+    - account-api, asset-management-api, notification-api, and transaction-api therefore remain not addressable via stable Kubernetes Services; application functionality may be incomplete until manifests are corrected.
+    - Kompose generated duplicate Service ports for account-api-mongo, api-gateway, asset-management-api-mysql, config-server, discovery-server, and transaction-api-postgres; duplicates were removed.
+    - account-api-mongo PVC was preserved, but mount path was corrected from /data/mongo to /data/db to match MongoDB conventional runtime data location.
+    - asset-management-api-mysql PVC was preserved, but mount path was corrected from /data/mysql to /var/lib/mysql to match MySQL conventional runtime data location.
+    - transaction-api-postgres PVC was preserved, but mount path was corrected from /data/postgres to /var/lib/postgresql/data and subPath pgdata was added to avoid lost+found issues on fresh volumes.
+    - grafana PVC mount /var/lib/grafana was preserved as a valid persistent data path.
+    - config-server host bind input ./config-files was missing per Kompose warnings; PVC use for config-like content was removed and an emptyDir mount is used only to keep the path present for baseline validation. Real config artifacts may still be missing at runtime.
+    - prometheus host file input ./prometheus-configuration.yml was missing per Kompose warnings; PVC file mount was replaced with a ConfigMap-backed file at /etc/prometheus/prometheus.yml for baseline validation.
+    - MySQL, PostgreSQL, and Grafana sensitive values were moved from plain env values into standard Kubernetes Secrets.
+    - Kafka listener settings were adjusted for pod-local quorum/controller traffic: KAFKA_CONTROLLER_QUORUM_VOTERS now uses 1@localhost:29093 and KAFKA_LISTENERS binds internal listeners to 0.0.0.0. Advertised listeners still expose localhost for HOST and are likely unsuitable for non-local clients; retained as a runtime issue note.
+    - No CRDs were used. Standard APIs only.
+    - Validation assumptions: cluster has a default StorageClass and EBS CSI support so PVCs can bind.
+    - Kompose stderr retained: Compose version field obsolete; several host paths/files were missing and ignored; links were not meaningfully preserved; service objects were not created for account-api, asset-management-api, notification-api, and transaction-api because ports were not specified.
+    - Unresolved artifact issue: application images may expect external config files or internal classpath resources not present in these manifests, especially config-server and prometheus source inputs originally referenced as host files.

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    Kompose warnings:
+      - `version` is obsolete
+      - Service "quotes" won't be created because 'ports' is not specified
+
+    Migration decisions / assumptions:
+      - Created non-default namespace: sme-app.
+      - Kept Deployments for api, frontend, quotes (no StatefulSet required).
+      - Added containerPort: 5000 to quotes Deployment (inferred from QUOTES_API).
+      - Created ClusterIP Service for quotes on port 5000 to enable intra-cluster calls from api.
+      - Kept api as ClusterIP on port 3000 (internal only) per plan; QUOTES_API remains "http://quotes:5000".
+      - Kept frontend Service as ClusterIP with port 8080 -> targetPort 80 and added an ALB Ingress to expose the frontend externally.
+      - Added an ALB-style Ingress (ingressClassName: alb) with example.com as host. Replace host as needed.
+      - No probes were added because none were evidenced in source manifests.
+      - No PersistentVolumeClaims were present; none were added.
+
+    Next actions for infra (not included here):
+      - Install AWS Load Balancer Controller with IRSA and proper IAM permissions to enable the ALB Ingress.
+      - Adjust ingress host and TLS as needed (cert-manager / ExternalDNS not configured here).

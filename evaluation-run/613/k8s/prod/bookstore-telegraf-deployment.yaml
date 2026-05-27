@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-telegraf
+  namespace: bookstore
+  labels:
+    app: bookstore-telegraf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-telegraf
+  template:
+    metadata:
+      labels:
+        app: bookstore-telegraf
+    spec:
+      containers:
+        - name: bookstore-telegraf
+          image: ralfx22/bsa-telegraf:latest
+          ports:
+            - containerPort: 8125
+              protocol: UDP
+          env:
+            - name: HOSTNAME
+              value: bookstore-telegraf
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "128Mi"
+      restartPolicy: Always

@@ -1,0 +1,23 @@
+=== terraform fmt ===
+=== terraform init ===
+Initializing provider plugins...
+- Finding latest version of hashicorp/aws...
+
+Error: Failed to query available provider packages
+
+Could not retrieve the list of available versions for provider hashicorp/aws:
+could not connect to registry.terraform.io: failed to request discovery
+document: Get "https://registry.terraform.io/.well-known/terraform.json":
+dial tcp: lookup registry.terraform.io on 127.0.0.11:53: server misbehaving
+
+To see which modules are currently depending on hashicorp/aws and what
+versions are specified, run the following command:
+    terraform providers
+=== terraform validate ===
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/aws, but
+that provider isn't available. You may be able to install it automatically by
+running:
+  terraform init

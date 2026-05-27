@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: rrb-app
+  labels:
+    io.kompose.service: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: config-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: config-server
+    spec:
+      containers:
+        - name: config-server
+          image: ralfx22/rrb-config-server
+          ports:
+            - containerPort: 8888
+          env:
+            - name: spring.profiles.active
+              value: "docker"

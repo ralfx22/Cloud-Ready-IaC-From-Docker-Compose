@@ -1,0 +1,95 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for eks...
+- eks in .terraform/modules/eks
+- eks.eks_managed_node_group in .terraform/modules/eks/modules/eks-managed-node-group
+- eks.eks_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+- eks.fargate_profile in .terraform/modules/eks/modules/fargate-profile
+Downloading registry.terraform.io/terraform-aws-modules/kms/aws 4.0.0 for eks.kms...
+- eks.kms in .terraform/modules/eks.kms
+- eks.self_managed_node_group in .terraform/modules/eks/modules/self-managed-node-group
+- eks.self_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+- vpc in .terraform/modules/vpc
+Initializing provider plugins...
+- Finding hashicorp/null versions matching ">= 3.0.0"...
+- Finding hashicorp/kubernetes versions matching "~> 2.38"...
+- Finding hashicorp/tls versions matching ">= 4.0.0"...
+- Finding hashicorp/time versions matching ">= 0.9.0"...
+- Finding hashicorp/helm versions matching "~> 3.0"...
+- Finding hashicorp/http versions matching "~> 3.5"...
+- Finding hashicorp/aws versions matching ">= 6.0.0, >= 6.28.0, ~> 6.28"...
+- Finding hashicorp/cloudinit versions matching ">= 2.0.0"...
+- Installing hashicorp/kubernetes v2.38.0...
+- Installed hashicorp/kubernetes v2.38.0 (signed by HashiCorp)
+- Installing hashicorp/tls v4.3.0...
+- Installed hashicorp/tls v4.3.0 (signed by HashiCorp)
+- Installing hashicorp/time v0.14.0...
+- Installed hashicorp/time v0.14.0 (signed by HashiCorp)
+- Installing hashicorp/helm v3.1.1...
+- Installed hashicorp/helm v3.1.1 (signed by HashiCorp)
+- Installing hashicorp/http v3.6.0...
+- Installed hashicorp/http v3.6.0 (signed by HashiCorp)
+- Installing hashicorp/aws v6.45.0...
+- Installed hashicorp/aws v6.45.0 (signed by HashiCorp)
+- Installing hashicorp/cloudinit v2.4.0...
+- Installed hashicorp/cloudinit v2.4.0 (signed by HashiCorp)
+- Installing hashicorp/null v3.3.0...
+- Installed hashicorp/null v3.3.0 (signed by HashiCorp)
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+=== terraform validate ===
+
+Error: Unsupported block type
+
+  on main.tf line 254, in resource "helm_release" "aws_load_balancer_controller":
+ 254:   set {
+
+Blocks of type "set" are not expected here. Did you mean to define argument
+"set"? If so, use the equals sign to assign it a value.
+
+Error: Unsupported block type
+
+  on main.tf line 259, in resource "helm_release" "aws_load_balancer_controller":
+ 259:   set {
+
+Blocks of type "set" are not expected here. Did you mean to define argument
+"set"? If so, use the equals sign to assign it a value.
+
+Error: Unsupported block type
+
+  on main.tf line 264, in resource "helm_release" "aws_load_balancer_controller":
+ 264:   set {
+
+Blocks of type "set" are not expected here. Did you mean to define argument
+"set"? If so, use the equals sign to assign it a value.
+
+Error: Unsupported block type
+
+  on main.tf line 269, in resource "helm_release" "aws_load_balancer_controller":
+ 269:   set {
+
+Blocks of type "set" are not expected here. Did you mean to define argument
+"set"? If so, use the equals sign to assign it a value.
+
+Error: Unsupported block type
+
+  on main.tf line 274, in resource "helm_release" "aws_load_balancer_controller":
+ 274:   set {
+
+Blocks of type "set" are not expected here. Did you mean to define argument
+"set"? If so, use the equals sign to assign it a value.

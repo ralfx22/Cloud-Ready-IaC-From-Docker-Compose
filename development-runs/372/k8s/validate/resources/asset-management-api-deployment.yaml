@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api
+  namespace: rrb-app
+  labels:
+    io.kompose.service: asset-management-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: asset-management-api
+  template:
+    metadata:
+      labels:
+        io.kompose.service: asset-management-api
+    spec:
+      containers:
+        - name: asset-management-api
+          image: ralfx22/rrb-asset-management-api
+          env:
+            - name: spring.profiles.active
+              value: "docker"
+            - name: spring.cloud.config.uri
+              value: "http://config-server:8888/config-server"

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+  labels:
+    app: bookstore-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-frontend
+  template:
+    metadata:
+      labels:
+        app: bookstore-frontend
+    spec:
+      containers:
+        - name: bookstore-frontend
+          image: ralfx22/bsa-frontend:latest
+          env:
+            - name: BACKEND_API_GATEWAY_URL
+              value: "http://k8s-bookstor-bookstor-9b5635434e-528392878.eu-central-1.elb.amazonaws.com:8765"
+          ports:
+            - containerPort: 80
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "80"
+      port: 80
+      targetPort: 80
+  selector:
+    app: bookstore-frontend
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bookstore-frontend
+                port:
+                  number: 80

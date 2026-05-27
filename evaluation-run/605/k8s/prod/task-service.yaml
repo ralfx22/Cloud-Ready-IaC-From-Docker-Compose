@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: task
+  namespace: microservices-demo
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8082"
+      port: 8082
+      targetPort: 50053
+  selector:
+    app: task

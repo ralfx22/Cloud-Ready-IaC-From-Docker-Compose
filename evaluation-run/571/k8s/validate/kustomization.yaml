@@ -1,0 +1,14 @@
+namespace: ns-571
+resources:
+  - resources/app-config.yaml
+  - resources/cache-statefulset.yaml
+  - resources/celery-beat-deployment.yaml
+  - resources/celery-worker-deployment.yaml
+  - resources/db-statefulset.yaml
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/nginx-deployment.yaml
+  - resources/pvc.yaml
+  - resources/services.yaml
+  - resources/web-deployment.yaml

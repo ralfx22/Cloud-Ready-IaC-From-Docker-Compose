@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+  labels:
+    app.kubernetes.io/name: migration-notes
+    app.kubernetes.io/part-of: sme-app
+data:
+  notes: |
+    - Namespace 'sme-app' was added per the architecture plan.
+    - All workloads remain stateless Deployments because the architecture plan states no persistence is required and no Compose volumes or PVCs were provided.
+    - A Service for 'quotes' was added because the source Compose explicitly sets QUOTES_API=http://quotes:5000, but Kompose did not generate a quotes Service.
+    - quotes port 5000 was inferred from QUOTES_API=http://quotes:5000 because the source Compose and Kompose output did not declare ports for the quotes container.
+    - No liveness, readiness, or startup probes were added because no exact probe definitions were evidenced in the inputs.
+    - Docker Compose depends_on semantics are not reproduced in Kubernetes; no startup ordering or readiness orchestration was added.
+    - No Secret manifests were added because no secret values are inferable from the Compose file, Kompose output, or architecture plan.
+    - Public exposure is provided only for the frontend via a standard Ingress with ingressClassName 'alb'; frontend remains a ClusterIP Service and api remains internal-only.
+    - The ALB Ingress requires the AWS Load Balancer Controller to already be installed and authorized in the cluster; these manifests do not install that controller.
+    - HTTP-only ingress was configured because the architecture plan does not require TLS or an ACM certificate for baseline validation.
+    - Unresolved artifact validation: pullability and runtime behavior of images ralfx22/sme-api:v2, ralfx22/sme-frontend:v2, and ralfx22/sme-quotes:v2 were not validated by these manifests.
+    - Kompose warning retained: the Compose 'version' field is obsolete.
+    - Kompose warning retained: Service "quotes" won't be created because 'ports' is not specified.

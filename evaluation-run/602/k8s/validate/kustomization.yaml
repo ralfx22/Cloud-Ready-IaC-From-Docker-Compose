@@ -1,0 +1,13 @@
+namespace: ns-602
+resources:
+  - resources/00-namespace.yaml
+  - resources/01-migration-notes.yaml
+  - resources/02-ingress.yaml
+  - resources/api-gateway.yaml
+  - resources/api.yaml
+  - resources/mongo.yaml
+  - resources/mysql.yaml
+  - resources/postgresql.yaml
+  - resources/project.yaml
+  - resources/task.yaml
+  - resources/user.yaml

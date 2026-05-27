@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes
+  namespace: sme-app
+  labels:
+    app: quotes
+    io.kompose.service: quotes
+spec:
+  type: ClusterIP
+  selector:
+    app: quotes
+    io.kompose.service: quotes
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+

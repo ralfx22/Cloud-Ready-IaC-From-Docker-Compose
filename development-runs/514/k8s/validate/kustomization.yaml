@@ -1,0 +1,8 @@
+namespace: ns-514
+resources:
+  - resources/apps.yaml
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/services.yaml
+  - resources/storage-and-secrets.yaml

@@ -1,0 +1,134 @@
+```json
+{
+  "k8s": {
+    "namespace": "bookstore",
+    "services": [
+      {
+        "name": "bookstore-mysql-db",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-consul-discovery",
+        "type": "ClusterIP",
+        "port": 8500,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-zuul-api-gateway-server",
+        "type": "ClusterIP",
+        "port": 8765,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-account-service",
+        "type": "ClusterIP",
+        "port": 4001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-billing-service",
+        "type": "ClusterIP",
+        "port": 5001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-catalog-service",
+        "type": "ClusterIP",
+        "port": 6001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-order-service",
+        "type": "ClusterIP",
+        "port": 7001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-payment-service",
+        "type": "ClusterIP",
+        "port": 8001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-frontend",
+        "type": "ClusterIP",
+        "port": 80,
+        "exposed": true
+      },
+      {
+        "name": "bookstore-zipkin",
+        "type": "ClusterIP",
+        "port": 9411,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-prometheus",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-grafana",
+        "type": "ClusterIP",
+        "port": 3030,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-telegraf",
+        "type": "ClusterIP",
+        "port": 8125,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-influxdb",
+        "type": "ClusterIP",
+        "port": 8086,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-chronograf",
+        "type": "ClusterIP",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-kapacitor",
+        "type": "ClusterIP",
+        "port": 9092,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 5,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Node capacity calculation: Estimated ~5.6 GiB total request (mysql:512, consul:256, zuul:512, account:512, billing:512, catalog:512, order:512, payment:512, frontend:128, zipkin:512, prometheus:256, grafana:256, telegraf:128, influxdb:512, chronograf:128, kapacitor:256). With 1.4 GiB allocatable per t3.small node, a minimum of 4 nodes is required. Provisioning 5 to account for overhead and DaemonSets.",
+    "Persistent storage is required for MySQL, Grafana, InfluxDB, and Chronograf as defined by PVC manifests. EKS AWS EBS CSI driver addon is mandatory to fulfill these claims, and a default StorageClass must be provided.",
+    "The Telegraf Docker socket mount (/var/run/docker.sock) was skipped by Kompose and will be ignored. Host socket mounts are incompatible with standard EKS environments running containerd.",
+    "The environment variable BACKEND_API_GATEWAY_URL in the bookstore-frontend is set to http://localhost:8765. In a Kubernetes environment, this will not resolve to the API Gateway. This should be updated to point to the external Ingress URL of the gateway or the internal Kubernetes service DNS (http://bookstore-zuul-api-gateway-server:8765) depending on whether frontend API calls happen client-side or server-side.",
+    "Using AWS Load Balancer Controller to expose the bookstore-frontend application on port 80 over HTTP for baseline smoke testing.",
+    "All persistent deployments use strategy 'Recreate' which is acceptable for ReadWriteOnce EBS volumes in a baseline environment."
+  ]
+}
+```

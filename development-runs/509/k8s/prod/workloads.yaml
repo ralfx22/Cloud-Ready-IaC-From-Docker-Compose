@@ -1,0 +1,508 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-api
+  template:
+    metadata:
+      labels:
+        app: account-api
+    spec:
+      containers:
+        - name: account-api
+          image: ralfx22/rrb-account-api
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: spring.cloud.config.uri
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_CLOUD_CONFIG_URI
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/rrb-api-gateway
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: spring.cloud.config.uri
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_CLOUD_CONFIG_URI
+            - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-management-api
+  template:
+    metadata:
+      labels:
+        app: asset-management-api
+    spec:
+      containers:
+        - name: asset-management-api
+          image: ralfx22/rrb-asset-management-api
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: spring.cloud.config.uri
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_CLOUD_CONFIG_URI
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+    spec:
+      containers:
+        - name: config-server
+          image: ralfx22/rrb-config-server
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+          ports:
+            - containerPort: 8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-server
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: discovery-server
+  template:
+    metadata:
+      labels:
+        app: discovery-server
+    spec:
+      containers:
+        - name: discovery-server
+          image: ralfx22/rrb-discovery-server
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: spring.cloud.config.uri
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_CLOUD_CONFIG_URI
+          ports:
+            - containerPort: 8761
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-api
+  template:
+    metadata:
+      labels:
+        app: notification-api
+    spec:
+      containers:
+        - name: notification-api
+          image: ralfx22/rrb-notification-api
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: spring.cloud.config.uri
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_CLOUD_CONFIG_URI
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-api
+  template:
+    metadata:
+      labels:
+        app: transaction-api
+    spec:
+      containers:
+        - name: transaction-api
+          image: ralfx22/rrb-transaction-api
+          env:
+            - name: spring.profiles.active
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: spring.cloud.config.uri
+              valueFrom:
+                configMapKeyRef:
+                  name: rrb-app-config
+                  key: SPRING_CLOUD_CONFIG_URI
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: account-api-mongo
+  template:
+    metadata:
+      labels:
+        app: account-api-mongo
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: account-api-mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/mongo
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: account-api-mongo-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: asset-management-api-mysql
+  template:
+    metadata:
+      labels:
+        app: asset-management-api-mysql
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: asset-management-api-mysql
+          image: mysql:8.0.33
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /data/mysql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: asset-management-api-mysql-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: transaction-api-postgres
+  template:
+    metadata:
+      labels:
+        app: transaction-api-postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: transaction-api-postgres
+          image: postgres:15.2
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /data/postgres
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: transaction-api-postgres-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api-kafka
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-api-kafka
+  template:
+    metadata:
+      labels:
+        app: notification-api-kafka
+    spec:
+      containers:
+        - name: notification-api-kafka
+          image: confluentinc/cp-kafka:7.4.0
+          env:
+            - name: CLUSTER_ID
+              value: MkU3OEVANTcwNTJENDM2Qk
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: broker,controller
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: PLAINTEXT://notification-api-kafka:9092
+            - name: KAFKA_LISTENERS
+              value: PLAINTEXT://0.0.0.0:9092,CONTROLLER://127.0.0.1:29093
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: CONTROLLER
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: 1@127.0.0.1:29093
+          ports:
+            - containerPort: 9092
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.0.11
+          ports:
+            - containerPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.43.0
+          ports:
+            - containerPort: 9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: rrb-app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.0.1
+          env:
+            - name: gf_security_admin_user
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: GF_SECURITY_ADMIN_USER
+            - name: gf_security_admin_password
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: GF_SECURITY_ADMIN_PASSWORD
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: rrb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:2.24.0
+          ports:
+            - containerPort: 9411

@@ -1,0 +1,37 @@
+namespace: ns-371
+resources:
+  - resources/account-api-mongo-claim0-persistentvolumeclaim.yaml
+  - resources/account-api-mongo-deployment.yaml
+  - resources/account-api-mongo-service.yaml
+  - resources/account-api-pod.yaml
+  - resources/api-gateway-ingress.yaml
+  - resources/api-gateway-pod.yaml
+  - resources/api-gateway-service.yaml
+  - resources/asset-management-api-mysql-claim0-persistentvolumeclaim.yaml
+  - resources/asset-management-api-mysql-deployment.yaml
+  - resources/asset-management-api-mysql-service.yaml
+  - resources/asset-management-api-pod.yaml
+  - resources/config-server-claim0-persistentvolumeclaim.yaml
+  - resources/config-server-deployment.yaml
+  - resources/config-server-service.yaml
+  - resources/discovery-server-pod.yaml
+  - resources/discovery-server-service.yaml
+  - resources/grafana-claim0-persistentvolumeclaim.yaml
+  - resources/grafana-deployment.yaml
+  - resources/grafana-service.yaml
+  - resources/migration-notes.yaml
+  - resources/notification-api-kafka-deployment.yaml
+  - resources/notification-api-kafka-service.yaml
+  - resources/notification-api-pod.yaml
+  - resources/prometheus-claim0-persistentvolumeclaim.yaml
+  - resources/prometheus-deployment.yaml
+  - resources/prometheus-service.yaml
+  - resources/redis-deployment.yaml
+  - resources/redis-service.yaml
+  - resources/secrets-placeholder.yaml
+  - resources/transaction-api-pod.yaml
+  - resources/transaction-api-postgres-claim0-persistentvolumeclaim.yaml
+  - resources/transaction-api-postgres-deployment.yaml
+  - resources/transaction-api-postgres-service.yaml
+  - resources/zipkin-deployment.yaml
+  - resources/zipkin-service.yaml

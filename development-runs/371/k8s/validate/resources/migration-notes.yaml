@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservices
+data:
+  notes: |-
+    Namespace: all application resources deployed into 'microservices'.
+
+    Ingress / Exposure:
+    - api-gateway is exposed via an ALB Ingress (ingressClassName: alb) with HTTP (port 80) -> service/api-gateway:8080.
+    - All other services remain ClusterIP/internal as per architecture plan.
+
+    Storage & PVCs:
+    - Kompose created PVCs (100Mi default) for services that had host mounts. These PVCs are present and namespace-scoped.
+    - Plan: enable AWS EBS CSI driver for dynamic PV provisioning and adjust storageClass/size as needed.
+
+    Pods vs Deployments:
+    - Several Compose services lacked 'ports' and were converted to bare Pods by Kompose (account-api, asset-management-api, notification-api, transaction-api, discovery-server, etc.).
+    - For baseline validation, the generated Pods are left as-is to preserve Kompose output; recommend converting to Deployments with probes and resource requests in the next iteration.
+
+    Secrets:
+    - Placeholder Secrets were added for MySQL, Postgres and Grafana admin credentials (stringData). The current workloads still reference environment variables as in the original Kompose manifests; update workloads to reference these Secrets if secret injection is required.
+
+    Kompose warnings (extracted):
+    - `version` is obsolete
+    - Several services (account-api, asset-management-api, notification-api, transaction-api) weren't created as Services because 'ports' was not specified in compose (Kompose created Pods instead).
+    - Host path volume mounts were ignored because local host paths were not portable or missing; Kompose created PVCs instead.
+    - Kompose created PVCs with small default sizes (100Mi) for each previously-mounted host volume — confirm sizing and storageClass (EBS gp3) in AWS.
+
+    Assumptions & Next Steps:
+    - EKS cluster will provide AWS Load Balancer Controller for ALB Ingress provisioning and CSI driver for EBS dynamic provisioning.
+    - TLS/ACM not configured for ALB in this baseline (HTTP-only) — add certificate ARN and ssl-redirect annotations when TLS is required.
+    - Ensure appropriate IAM/IRSA roles and subnet tagging are configured for ALB and CSI drivers.

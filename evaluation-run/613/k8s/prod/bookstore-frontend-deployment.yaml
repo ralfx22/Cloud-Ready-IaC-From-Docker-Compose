@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+  labels:
+    app: bookstore-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-frontend
+  template:
+    metadata:
+      labels:
+        app: bookstore-frontend
+    spec:
+      containers:
+        - name: bookstore-frontend
+          image: ralfx22/bsa-frontend:latest
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          env:
+            - name: BACKEND_API_GATEWAY_URL
+              value: http://k8s-bookstor-bookstor-9b5635434e-28622297.eu-central-1.elb.amazonaws.com
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "128Mi"
+      restartPolicy: Always

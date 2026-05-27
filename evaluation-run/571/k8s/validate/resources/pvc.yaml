@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/part-of: wger
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: cache
+    app.kubernetes.io/part-of: wger
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: celery-beat-data
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: celery-beat
+    app.kubernetes.io/part-of: wger
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: static-data
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: static
+    app.kubernetes.io/part-of: wger
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-data
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: media
+    app.kubernetes.io/part-of: wger
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi

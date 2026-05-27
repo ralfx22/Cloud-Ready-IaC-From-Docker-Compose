@@ -1,0 +1,22 @@
+namespace: ns-598
+resources:
+  - resources/api-deployment.yaml
+  - resources/api-gateway-deployment.yaml
+  - resources/api-gateway-ingress.yaml
+  - resources/api-gateway-service.yaml
+  - resources/api-service.yaml
+  - resources/db-secrets.yaml
+  - resources/migration-notes.yaml
+  - resources/mongo-service.yaml
+  - resources/mongo-statefulset.yaml
+  - resources/mysql-service.yaml
+  - resources/mysql-statefulset.yaml
+  - resources/namespace.yaml
+  - resources/postgresql-service.yaml
+  - resources/postgresql-statefulset.yaml
+  - resources/project-deployment.yaml
+  - resources/project-service.yaml
+  - resources/task-deployment.yaml
+  - resources/task-service.yaml
+  - resources/user-deployment.yaml
+  - resources/user-service.yaml

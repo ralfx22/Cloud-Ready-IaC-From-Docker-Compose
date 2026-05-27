@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zipkin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:2.24.0
+          ports:
+            - containerPort: 9411
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: zipkin
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: zipkin
+  ports:
+    - name: http
+      port: 9411
+      targetPort: 9411

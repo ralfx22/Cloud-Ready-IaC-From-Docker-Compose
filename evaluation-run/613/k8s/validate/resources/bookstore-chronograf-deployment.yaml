@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-chronograf
+  namespace: bookstore
+  labels:
+    app: bookstore-chronograf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-chronograf
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: bookstore-chronograf
+    spec:
+      containers:
+        - name: bookstore-chronograf
+          image: chronograf:1.7.3
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+          env:
+            - name: INFLUXDB_URL
+              value: http://bookstore-influxdb:8086
+            - name: KAPACITOR_URL
+              value: http://bookstore-kapacitor:9092
+          resources:
+            requests:
+              memory: "128Mi"
+            limits:
+              memory: "128Mi"
+          volumeMounts:
+            - name: booksture-chronograf-volume
+              mountPath: /var/lib/chronograf
+      restartPolicy: Always
+      volumes:
+        - name: booksture-chronograf-volume
+          persistentVolumeClaim:
+            claimName: booksture-chronograf-volume

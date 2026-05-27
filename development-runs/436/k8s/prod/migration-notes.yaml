@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Replaced Kompose-generated standalone Pods for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api with Deployments for safer apply/reconcile behavior.
+    - Kept all declared services as ClusterIP; created one public ALB Ingress only for api-gateway as required by plan.
+    - No probes were added because no exact probe path/port or exec evidence was provided.
+    - account-api, asset-management-api, notification-api, and transaction-api still have no Services because no ports were evidenced in Compose or generated manifests.
+    - Converted inline sensitive env values for MySQL, Postgres, and Grafana into Kubernetes Secrets.
+    - Preserved non-sensitive environment variables from Compose.
+    - Mongo persistent mount corrected from /data/mongo to /data/db because /data/db is the standard Mongo runtime data directory.
+    - MySQL persistent mount corrected from /data/mysql to /var/lib/mysql because /var/lib/mysql is the standard MySQL runtime data directory.
+    - MySQL PVC mounted with subPath mysql-data to avoid mount-root lost+found issues on freshly formatted volumes.
+    - Postgres persistent mount corrected from /data/postgres to /var/lib/postgresql/data and PGDATA set to /var/lib/postgresql/data/pgdata to avoid lost+found issues at mount root.
+    - Config-server host bind ./config-files:/app/resources/config-files was not preserved as a PVC because it is config-like rather than runtime data; source path was also reported missing by Kompose. No replacement ConfigMap content was possible because file contents were not provided.
+    - Prometheus host file mount was replaced with a minimal ConfigMap-based prometheus.yml because a PVC mounted to a file path is not appropriate and the source file was missing during Kompose conversion.
+    - Grafana data remains persistent via PVC at /var/lib/grafana.
+    - Kafka remains non-persistent because Compose provided no volume and plan explicitly notes baseline risk.
+    - Kafka listener settings were rewritten for Kubernetes-safe single-pod operation: removed HOST listener and localhost advertised address; internal controller quorum now uses pod-local 127.0.0.1:29093 and client advertised listener uses Service DNS notification-api-kafka:9092.
+    - Kompose warnings recorded: Compose version field obsolete; several host bind paths/files were missing during conversion; host bind semantics were unsupported; services were not created for account-api, asset-management-api, notification-api, and transaction-api because ports were not specified.
+    - AWS ALB Ingress assumes AWS Load Balancer Controller is installed separately and subnet tagging/IRSA are handled outside these manifests.

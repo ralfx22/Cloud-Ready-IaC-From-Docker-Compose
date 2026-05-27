@@ -1,0 +1,9 @@
+namespace: ns-140
+resources:
+  - resources/10-quotes-deployment.yaml
+  - resources/11-quotes-service.yaml
+  - resources/12-api-deployment.yaml
+  - resources/13-api-service.yaml
+  - resources/14-frontend-deployment.yaml
+  - resources/15-frontend-service.yaml
+  - resources/20-ingress-frontend-alb.yaml

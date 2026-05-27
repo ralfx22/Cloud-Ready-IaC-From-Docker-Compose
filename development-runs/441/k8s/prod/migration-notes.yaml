@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Public validation entrypoint created as ALB-backed Ingress for api-gateway on HTTP port 80 routing to service api-gateway:8080.
+    - All Services are ClusterIP per architecture plan.
+    - account-api, asset-management-api, notification-api, and transaction-api were converted from standalone Pods to Deployments because Pods are poor long-running primitives and Kompose omitted Services due to missing ports.
+    - No probes were included because no exact HTTP path, TCP readiness detail, or exec command was evidenced in source inputs.
+    - MongoDB persistent mount corrected from /data/mongo to /data/db based on standard MongoDB runtime data path.
+    - MySQL persistent mount corrected from /data/mysql to /var/lib/mysql based on standard MySQL runtime data path.
+    - PostgreSQL persistent mount corrected from /data/postgres to /var/lib/postgresql/data and PGDATA set to /var/lib/postgresql/data/pgdata to avoid lost+found issues on fresh volumes.
+    - Config-server PVC from Kompose was removed because /app/resources/config-files is config-like content, not persistent runtime data; baseline assumes image-baked config until files are provided.
+    - Prometheus PVC from Kompose was removed because /etc/prometheus/prometheus.yml is config-like content; replaced with a minimal ConfigMap-based configuration for baseline startup.
+    - Grafana admin credentials and database credentials were moved from plain env vars into Kubernetes Secrets.
+    - Grafana PVC retained because /var/lib/grafana is persistent runtime data.
+    - Redis kept ephemeral because Compose did not define persistence.
+    - Kafka listener settings were rewritten to Kubernetes-safe values. Docker/localhost host listener semantics were removed. Internal controller quorum voter now uses localhost:29093 because broker and controller run in the same pod. Advertised client listener uses notification-api-kafka.rrb-app.svc.cluster.local:9092.
+    - Stateful intent was identified for MongoDB, MySQL, and PostgreSQL, but manifests use safe Recreate-style single-replica Deployments with PVCs for broad apply compatibility and minimal baseline risk.
+    - Kompose warning recorded: obsolete compose version field.
+    - Kompose warning recorded: Services for account-api, asset-management-api, notification-api, and transaction-api were not generated because ports were not specified.
+    - Kompose warning recorded: host bind mount sources for account-api-mongo, asset-management-api-mysql, config-server, grafana, prometheus, and transaction-api-postgres were missing during conversion, so host path semantics were ignored.
+    - Unresolved artifact note: application container images are assumed to expose their intended internal ports where Services exist in Compose or architecture plan; non-exposed application services were not given synthetic Services because no ports were evidenced.

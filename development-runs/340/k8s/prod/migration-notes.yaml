@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    Source: Docker Compose and Kompose conversion
+
+    Architecture plan decisions (applied):
+    - Namespace 'sme-app' created and all resources placed into it.
+    - Frontend exposed via an Ingress (ALB) with HTTP-only listener for baseline validation.
+    - API and quotes services left as ClusterIP (internal-only).
+
+    Important adjustments made during migration:
+    - Added a ClusterIP Service for 'quotes' exposing port 5000 (Kompose did not create this because no ports were defined in Compose for quotes). Also set containerPort: 5000 on the quotes Deployment so the Service can target the application port.
+    - Standardized pod labels/selectors to use 'app: <name>' so Services correctly select backends.
+    - Kept Deployments (not StatefulSets) as there was no evidence of stateful requirements.
+    - No readiness/liveness/startup probes were present in the source; probes were therefore omitted per migration policy.
+    - No Secrets were found in the compose; no Secret manifests were added. If sensitive values are required, create Kubernetes Secret objects and reference them from the Pod specs.
+
+    Kompose warnings observed:
+    - WARN: `version` is obsolete in the Compose file.
+    - WARN: Service "quotes" won't be created because 'ports' is not specified.
+
+    Architecture plan notes (summary):
+    - Expose frontend via ALB Ingress (alb.ingress.kubernetes.io/scheme: internet-facing).
+    - ALB controller must be installed in the cluster with proper IAM/IRSA and public subnets tagged for ALB to function.
+    - TLS/ACM not configured for baseline validation (HTTP only).
+
+    Next recommended steps (for environment where cluster is provisioned):
+    1) Install AWS Load Balancer Controller (ALB) with IRSA and ensure public subnets are tagged appropriately so the controller can provision an internet-facing ALB.
+    2) Ensure EKS add-ons (vpc-cni, kube-proxy, coredns) are healthy before running smoke tests.
+    3) If any sensitive configuration is required, create Kubernetes Secrets and update Deployments to reference them.

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+  labels:
+    io.kompose.service: account-api-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: account-api-mongo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: account-api-mongo
+    spec:
+      containers:
+        - name: account-api-mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: account-api-mongo-claim0
+              mountPath: /data/db
+      volumes:
+        - name: account-api-mongo-claim0
+          persistentVolumeClaim:
+            claimName: account-api-mongo-claim0

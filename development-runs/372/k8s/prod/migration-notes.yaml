@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Kompose produced Pods for several application containers because 'ports' were not specified in the compose file. Pods were converted here into Deployments and ClusterIP Services were created/validated where appropriate.
+    - Host-path mounts and direct file mounts from Docker Compose were converted to PersistentVolumeClaims by Kompose. PVCs are present with 100Mi requests; review and adjust sizes and StorageClass (gp3 recommended for AWS).
+    - Secrets were not defined in the original compose; placeholder Secrets were created for MySQL, Postgres, and Grafana admin credentials and Deployments were updated to reference them. Replace these with real secrets manager values in production.
+    - All resources placed into the dedicated namespace 'rrb-app' per architecture plan.
+    - An ALB Ingress (ingressClassName: alb) was created to expose the api-gateway service on HTTP (port 80). This uses AWS Load Balancer Controller annotations; ensure the controller (and IRSA IAM role) is installed and public subnets are tagged for ALB.
+    - Probes were omitted intentionally because the original compose did not provide explicit probe paths/ports.
+    - Verify EBS CSI driver is installed in the cluster so PVCs are bound to EBS volumes.
+    - Review database and stateful workloads for production readiness (replicas, backups, storage sizes, storageClass, and StatefulSet migration if identity is required).
+    - Kompose warnings: several host paths/files were missing and thus ignored during conversion; ensure expected config files and data are provided or mounted appropriately.

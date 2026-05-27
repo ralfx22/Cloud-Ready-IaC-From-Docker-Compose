@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Converted Kompose standalone Pods to Deployments for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api to provide self-healing and apply cleanly in baseline Kubernetes.
+    - Kept only plan-authorized Services: account-api-mongo, api-gateway, asset-management-api-mysql, config-server, discovery-server, grafana, notification-api-kafka, prometheus, redis, transaction-api-postgres, and zipkin.
+    - Did not add Services for account-api, asset-management-api, notification-api, or transaction-api because the architecture plan says to preserve current Kubernetes-applied surface area and record reachability gaps.
+    - Added a public ALB-backed Ingress for api-gateway only, HTTP-only, with ingressClassName alb, as required by the plan.
+    - Removed duplicate Kompose-generated Service port entries where the same numeric port appeared twice.
+    - Omitted all probes because no exact probe behavior was evidenced in source manifests or compose.
+    - Preserved existing PVCs for MongoDB, MySQL, Grafana, and Postgres.
+    - Removed Kompose PVC usage for config-server because /app/resources/config-files is config-like, source files were missing, and PVC is not appropriate for this path in baseline validation.
+    - Removed Kompose PVC usage for Prometheus because /etc/prometheus/prometheus.yml is a file-like config path, source file was missing, and PVC mount to a file path was not reliable for baseline validation.
+    - Corrected MongoDB persistent mount path from /data/mongo to /data/db based on standard image runtime conventions. This remains an assumption because compose used a nonstandard path.
+    - Corrected MySQL persistent mount path from /data/mysql to /var/lib/mysql based on standard image runtime conventions.
+    - Corrected Postgres persistent mount path from /data/postgres to /var/lib/postgresql/data and set PGDATA=/var/lib/postgresql/data/pgdata to avoid lost+found issues on newly formatted volumes.
+    - Added pod fsGroup for MySQL and Postgres and Grafana to improve writable persistent volume behavior for non-root or image-managed users.
+    - Converted Compose-embedded database and Grafana credentials into Kubernetes Secrets while preserving env wiring.
+    - Kafka compose networking was not Kubernetes-safe. Rewrote internal single-node controller/quorum settings to pod-local addressing and advertised the broker using the Kubernetes Service DNS name notification-api-kafka.rrb-app.svc.cluster.local:9092.
+    - Kafka persistence was not added because no volume existed in compose or Kompose manifests; durability gap remains.
+    - Compose depends_on ordering was not implemented because it is not a Kubernetes readiness mechanism.
+    - Kompose warnings recorded: compose version obsolete; host bind mounts missing/unsupported; services without ports were not created; local config/data paths were unavailable during conversion.
+    - Unresolved artifact/runtime issue: images ralfx22/rrb-account-api, ralfx22/rrb-api-gateway, ralfx22/rrb-asset-management-api, ralfx22/rrb-config-server, ralfx22/rrb-discovery-server, ralfx22/rrb-notification-api, and ralfx22/rrb-transaction-api are assumed pullable and runnable as provided, but this was not validated here.
+    - Unresolved application reachability issue: internal application components without Services may not be reachable by peer services unless they use other discovery/config mechanisms not evidenced in the manifests.

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-server
+  namespace: microservices
+  labels:
+    io.kompose.service: discovery-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: eureka
+      port: 8761
+      targetPort: 8761
+  selector:
+    io.kompose.service: discovery-server

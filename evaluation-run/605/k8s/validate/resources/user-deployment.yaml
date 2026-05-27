@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: microservices-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+        - name: user
+          image: ralfx22/md-user
+          ports:
+            - containerPort: 50051
+          env:
+            - name: DB_URI
+              value: mongodb://mongo:27017/
+            - name: DB_NAME
+              value: Microservice-demo-user

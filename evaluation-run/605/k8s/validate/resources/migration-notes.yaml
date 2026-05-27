@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservices-demo
+data:
+  notes.txt: |
+    - Mapped stateless workloads to Deployments and database workloads to StatefulSets to ensure self-healing and proper storage behavior.
+    - Standardized service ports to match the explicit Architecture Plan and correctly updated dependent environment variables.
+    - Transformed local persistent volume claims into volumeClaimTemplates. Uses standard 1Gi PVC templates designed for dynamic provisioning by the AWS EBS CSI driver.
+    - Deployed database volumes with subPaths (mongo, mysql) or PGDATA config (postgres) to work around 'lost+found' initialization directory created on fresh EBS block devices.
+    - Added securityContext.fsGroup to StatefulSets to allow non-root database users standard mount permissions.
+    - Updated api-gateway to remove incompatible local image pull policies and added an ALB Ingress configured for internet-facing routing.

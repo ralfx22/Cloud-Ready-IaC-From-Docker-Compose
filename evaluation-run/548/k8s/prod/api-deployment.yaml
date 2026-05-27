@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: api
+  name: api
+  namespace: sme-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - env:
+            - name: QUOTES_API
+              value: http://quotes:5000
+          image: ralfx22/sme-api:v2
+          name: api
+          ports:
+            - containerPort: 3000
+              protocol: TCP

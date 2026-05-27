@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    Migration and reconciliation notes between Docker Compose intent and Kubernetes manifests:
+
+    - All resources deployed into Namespace: sme-app.
+    - Kompose did not create a Service for 'quotes' because no ports were specified in compose. A ClusterIP Service 'quotes' exposing port 5000 was added so that the 'api' Deployment's environment QUOTES_API=http://quotes:5000 can resolve and reach the quotes pod.
+    - Services created as ClusterIP: frontend (port 8080->target 80), api (3000->3000), quotes (5000->5000). Only 'frontend' is exposed via an ALB Ingress (internet-facing) per the architecture plan.
+    - Probes have been omitted: no readiness or liveness probes were added because none were explicitly evidenced in the source manifests.
+    - No PVCs or Secrets were detected in the original manifests. No storage changes were made. If persistent storage is required later, add PVCs and the EBS CSI driver.
+    - Standard Kubernetes APIs only. Ingress uses annotations for the AWS Load Balancer Controller (alb) but does not rely on any non-standard CRDs.
+    - The Ingress is HTTP-only for baseline validation (alb.ingress.kubernetes.io/listen-ports configured for HTTP). TLS/ACM can be added later.
+    - Keep an eye on the actual port the quotes container listens on; manifests assume port 5000 based on the compose environment and architecture plan. If the container listens on a different port, update the containerPort and Service targetPort accordingly.
+
+    Kompose stderr highlights:
+    - Warn: compose file 'version' is obsolete.
+    - Warn: Service 'quotes' won't be created because 'ports' is not specified. Remediated by adding quotes Service on port 5000.
+
+    Operational notes from the architecture plan (summary):
+    - Deploy into a dedicated namespace 'sme-app'.
+    - A managed EKS cluster with 2 nodes (t3.small) is planned as the baseline; ensure AWS Load Balancer Controller is installed with IRSA so the Ingress can provision an ALB.
+    - Ensure public subnets are tagged for an internet-facing ALB. For baseline validation, HTTP-only ingress is sufficient.

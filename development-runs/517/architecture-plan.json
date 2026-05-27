@@ -1,0 +1,69 @@
+{
+  "k8s": {
+    "namespace": "quotes-app",
+    "services": [
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": [
+      "10.0.0.0/24",
+      "10.0.1.0/24"
+    ],
+    "private_subnets": [
+      "10.0.10.0/24",
+      "10.0.11.0/24"
+    ],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline architecture: one VPC, one managed EKS cluster, one managed node group in private subnets, OIDC enabled, and IRSA used for the AWS Load Balancer Controller.",
+    "Mandatory EKS managed add-ons to include: vpc-cni, kube-proxy, and coredns. vpc-cni should be created before compute so nodes can join and become Ready. No other add-ons are planned unless explicitly required.",
+    "Ingress is not present in the Kompose output, so add a minimal internet-facing ALB Ingress for the frontend service to provide one externally reachable HTTP validation path. HTTP-only is sufficient for baseline validation because no domain name or ACM certificate input was provided.",
+    "Public subnets must be tagged for ALB discovery and private subnets used for worker nodes. NAT is required so private nodes can pull container images and reach AWS APIs.",
+    "Storage/persistence intent: no volumes, bind mounts, PVCs, ConfigMap-mounted files, or Secret-mounted files are declared in Compose or in the generated manifests. Plan all workloads as stateless Deployments with no PVCs and no StatefulSets. EBS CSI is not required.",
+    "Config/secrets classification: QUOTES_API=http://quotes:5000 is non-secret runtime configuration and can remain an environment variable or be sourced from a ConfigMap. No secrets are inferred from the inputs.",
+    "Compose-to-Kubernetes discrepancy: Compose exposed api on host port 3000 and frontend on host port 8080 to container port 80, but Kompose generated only internal ClusterIP Services. Per the rule to prefer Kubernetes realization, the plan keeps api internal and exposes only frontend externally through ALB Ingress.",
+    "Critical manifest gap: api is configured to call http://quotes:5000, but Kompose did not create a quotes Service because the Compose service had no declared ports. A working baseline requires an internal ClusterIP Service for quotes on port 5000 and a matching declared container port, even though that is missing from the current Kompose output.",
+    "Dependency handling: Compose depends_on expresses startup intent only. Kubernetes will not guarantee start order, so the baseline relies on service discovery plus application retry/readiness behavior rather than ordered container startup.",
+    "Node sizing on t3.small uses 1.4 GiB allocatable per node. Conservative per-service memory estimates because runtimes are unspecified: frontend 512Mi, api 512Mi, quotes 512Mi. Application total = 1536Mi.",
+    "Approximate system/controller memory for sizing: aws-node 2x128Mi, kube-proxy 2x64Mi, coredns 2x70Mi, AWS Load Balancer Controller 256Mi. Combined app + baseline system/controller memory is about 2316Mi, so 2 nodes provide about 2867Mi allocatable and satisfy the requirement that allocatable memory exceed requested pod memory.",
+    "Approximate pod count for sizing: 3 application pods + 2 aws-node + 2 kube-proxy + 2 coredns + 1 AWS Load Balancer Controller = 10 pods. Using an approximate t3.small EKS pod limit of 11 pods per node, 2 nodes provide sufficient pod capacity.",
+    "No HPA or metrics requirements appear in the manifests, so metrics-server is not planned. No TLS automation, DNS automation, service mesh, observability stack, or policy engine is planned because the inputs do not require them.",
+    "Kompose stderr indicates two key issues: the Compose version field is obsolete, and quotes did not get a Service because no ports were specified.",
+    "Image source gap: the Compose file uses local build contexts and local image names (api, frontend, quotes). EKS nodes cannot pull local-only images, so these images must be published to a reachable container registry before deployment. Registry choice is not specified, so it is noted but not added to the plan."
+  ]
+}

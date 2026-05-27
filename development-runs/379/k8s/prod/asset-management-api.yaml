@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: asset-management-api-mysql-secret
+  namespace: rrb-app
+type: Opaque
+stringData:
+  MYSQL_DATABASE: mysql
+  MYSQL_USER: admin
+  MYSQL_PASSWORD: pwd
+  MYSQL_ROOT_PASSWORD: pwd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: asset-management-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: asset-management-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: asset-management-api
+    spec:
+      containers:
+        - name: asset-management-api
+          image: ralfx22/rrb-asset-management-api
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: asset-management-api-mysql
+spec:
+  serviceName: asset-management-api-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: asset-management-api-mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: asset-management-api-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0.33
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          ports:
+            - containerPort: 3306
+              name: mysql
+          envFrom:
+            - secretRef:
+                name: asset-management-api-mysql-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: asset-management-api-mysql
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: asset-management-api-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306

@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bookstore-db-volume
+  namespace: bookstore
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-mysql-db
+  namespace: bookstore
+  labels:
+    app: bookstore-mysql-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstore-mysql-db
+  template:
+    metadata:
+      labels:
+        app: bookstore-mysql-db
+    spec:
+      containers:
+        - name: bookstore-mysql-db
+          image: mysql:5.7
+          env:
+            - name: MYSQL_DATABASE
+              value: "bookstore_db"
+            - name: MYSQL_PASSWORD
+              value: "PaSSworD"
+            - name: MYSQL_ROOT_PASSWORD
+              value: "r00tPaSSworD"
+            - name: MYSQL_USER
+              value: "bookstoreDBA"
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: bookstore-db-volume
+              subPath: data
+      volumes:
+        - name: bookstore-db-volume
+          persistentVolumeClaim:
+            claimName: bookstore-db-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-mysql-db
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "3306"
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: bookstore-mysql-db

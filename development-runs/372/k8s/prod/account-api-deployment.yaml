@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api
+  namespace: rrb-app
+  labels:
+    io.kompose.service: account-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: account-api
+  template:
+    metadata:
+      labels:
+        io.kompose.service: account-api
+    spec:
+      containers:
+        - name: account-api
+          image: ralfx22/rrb-account-api
+          env:
+            - name: spring.cloud.config.uri
+              value: "http://config-server:8888/config-server"
+            - name: spring.profiles.active
+              value: "docker"

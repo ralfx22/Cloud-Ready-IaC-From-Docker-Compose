@@ -1,0 +1,8 @@
+namespace: ns-375
+resources:
+  - resources/01-secrets.yaml
+  - resources/02-configmaps.yaml
+  - resources/10-storage.yaml
+  - resources/20-workloads.yaml
+  - resources/30-services.yaml
+  - resources/40-ingress.yaml

@@ -1,0 +1,98 @@
+
+
+```json
+{
+  "k8s": {
+    "namespace": "microservice-demo",
+    "services": [
+      {
+        "name": "user",
+        "type": "Deployment",
+        "port": 50051,
+        "exposed": false
+      },
+      {
+        "name": "project",
+        "type": "Deployment",
+        "port": 50052,
+        "exposed": false
+      },
+      {
+        "name": "task",
+        "type": "Deployment",
+        "port": 50053,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "Deployment",
+        "port": 50059,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "Deployment",
+        "port": 9090,
+        "exposed": true
+      },
+      {
+        "name": "postgresql",
+        "type": "StatefulSet",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "mysql",
+        "type": "StatefulSet",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "mongo",
+        "type": "StatefulSet",
+        "port": 27017,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 4,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.3.0/24", "10.0.4.0/24"],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Memory estimates per service: postgresql ~512Mi, mysql ~512Mi, mongo ~512Mi, user ~256Mi, project ~256Mi, task ~256Mi, api ~256Mi, api-gateway ~256Mi. Total estimated pod memory: ~2816Mi.",
+    "Node sizing: t3.small has ~1.4 GiB (1434 Mi) allocatable. 4 nodes provide ~5736 Mi allocatable, comfortably exceeding ~2816 Mi total pod requests. 8 pods across 4 nodes also stays well within per-node pod limits.",
+    "Kompose generated bare Pods; these must be converted to Deployments (stateless services) and StatefulSets (databases) for production readiness, self-healing, and rolling updates.",
+    "Databases (postgresql, mysql, mongo) will use StatefulSets with PVCs backed by EBS. EBS CSI driver add-on is required. A gp3 default StorageClass will be created to ensure PVCs bind.",
+    "MongoDB has two PVCs: mongodb (/data/db) for data and mongodb-config (/data/configdb) for config metadata. Both are persistent runtime data directories, so both are kept as PVCs on the StatefulSet.",
+    "PostgreSQL volumeMount path corrected: Kompose generated /var/lib/postgresql/data but the postgres:16 image PGDATA default expects a subdirectory. Will use subPath or set PGDATA env to /var/lib/postgresql/data/pgdata to avoid initdb errors on a non-empty mount.",
+    "Kompose liveness probe for postgresql has the entire command as a single string in a list; must be split into proper exec command array: ['pg_isready', '-U', 'postgres', '-d', 'microservice-task'].",
+    "Discrepancy: Kompose Services for user, project, task, api use the host-mapped ports (8080, 8081, 8082, 8083) as the service port with targetPort set to the container port. In the K8s plan, ClusterIP services will use the actual container ports directly (50051, 50052, 50053, 50059) since inter-service env vars reference those ports. The api-gateway references api:50059 via HOST/PORT env vars.",
+    "api-gateway is the external entrypoint (HTTP proxy on port 9090). An Ingress resource with ALB annotations will route external traffic to api-gateway:9090. HTTP-only is sufficient for baseline validation; no ACM certificate required.",
+    "AWS Load Balancer Controller will be deployed via IRSA (OIDC). Public subnets tagged with kubernetes.io/role/elb=1 and private subnets tagged with kubernetes.io/role/internal-elb=1 for ALB subnet auto-discovery.",
+    "EKS managed add-ons: vpc-cni (before_compute=true), kube-proxy, coredns. Trigger-based add-on: aws-ebs-csi-driver (needed for PVCs). AWS LB Controller deployed for Ingress/ALB.",
+    "Database credentials (MYSQL_ROOT_PASSWORD, POSTGRES_PASSWORD, DB_URI values containing passwords) are currently plain env vars. Ideally these would be Kubernetes Secrets, but for baseline we will create Secrets and reference them from pod specs. No external secrets manager is planned.",
+    "Kompose warnings about non-existent volume directories are expected since named Docker volumes don't have local paths; PVCs handle this in K8s.",
+    "All database services (postgresql, mysql, mongo) are internal-only ClusterIP services. Only api-gateway is exposed externally via ALB Ingress.",
+    "Nodes will run in private subnets; NAT gateway is required for pulling container images and EKS API communication.",
+    "pull_policy: never on api-gateway in Compose is Docker-local only; in K8s will use imagePullPolicy: IfNotPresent since the image ralfx22/md-api must be pulled from a registry."
+  ]
+}
+```

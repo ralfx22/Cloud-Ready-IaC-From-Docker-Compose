@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  summary: |
+    - Namespace set to sme-app for all namespaced resources.
+    - All workloads remain Deployments with replicas=1 per architecture plan.
+    - Services are ClusterIP only; only frontend is exposed via an ALB Ingress.
+    - Frontend Ingress is HTTP-only because no domain name, TLS requirement, or ACM certificate ARN was provided.
+    - No volumes, PVCs, StatefulSets, or Secrets were required by the provided inputs.
+    - No probes were added because no exact HTTP path, TCP behavior, or exec command was evidenced.
+    - Compose depends_on semantics are not represented in Kubernetes; applications must tolerate dependency startup lag.
+  changes: |
+    - Added a missing quotes Service on port 5000 because api is configured with QUOTES_API=http://quotes:5000.
+    - Added containerPort 5000 to the quotes Deployment so the quotes Service matches a declared container port.
+    - Kept frontend Service as ClusterIP and exposed it through a networking.k8s.io/v1 Ingress with ingressClassName=alb.
+    - Kept api internal on port 3000 and frontend Service port 8080 targeting container port 80.
+  assumptions: |
+    - The quotes container listens on TCP port 5000; this was inferred from QUOTES_API=http://quotes:5000 and the architecture plan because Compose and Kompose did not declare a quotes port.
+    - The frontend container serves HTTP on port 80 and the api container serves HTTP on port 3000, matching the provided Compose and Kompose manifests.
+    - The AWS Load Balancer Controller, its IRSA permissions, and required subnet tags are installed separately; these manifests only define a standard Ingress resource and annotations.
+  unresolved: |
+    - Container image availability and pull permissions for ralfx22/sme-quotes:v2, ralfx22/sme-api:v2, and ralfx22/sme-frontend:v2 were not validated in this manifest step.
+    - No image digests were provided, so deployments remain tag-based.
+    - No application health endpoints were provided, so smoke-test validation relies on successful pod start and frontend reachability through the ALB Ingress.
+  kompose-stderr: |
+    WARN /data/shared/525/docker-compose.yml: `version` is obsolete
+    WARN Service "quotes" won't be created because 'ports' is not specified
+    INFO Kubernetes file "kompose/api-service.yaml" created
+    INFO Kubernetes file "kompose/frontend-service.yaml" created
+    INFO Kubernetes file "kompose/api-deployment.yaml" created
+    INFO Kubernetes file "kompose/frontend-deployment.yaml" created
+    INFO Kubernetes file "kompose/quotes-deployment.yaml" created

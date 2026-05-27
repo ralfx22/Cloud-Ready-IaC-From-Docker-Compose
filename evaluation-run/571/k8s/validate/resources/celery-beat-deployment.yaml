@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: celery-beat
+    app.kubernetes.io/part-of: wger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-beat
+      app.kubernetes.io/part-of: wger
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: celery-beat
+        app.kubernetes.io/part-of: wger
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: celery-beat
+          image: docker.io/wger/server:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - /start-beat
+          envFrom:
+            - configMapRef:
+                name: wger-env
+            - secretRef:
+                name: wger-env-secret
+          volumeMounts:
+            - name: celery-beat-data
+              mountPath: /home/wger/beat
+      volumes:
+        - name: celery-beat-data
+          persistentVolumeClaim:
+            claimName: celery-beat-data

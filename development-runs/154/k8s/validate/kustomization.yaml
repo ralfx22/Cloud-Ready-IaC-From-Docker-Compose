@@ -1,0 +1,8 @@
+namespace: ns-154
+resources:
+  - resources/10-quotes-deployment.yaml
+  - resources/11-quotes-service.yaml
+  - resources/20-api-deployment.yaml
+  - resources/21-api-service.yaml
+  - resources/30-frontend-deployment.yaml
+  - resources/31-frontend-service.yaml

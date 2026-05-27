@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bookstore-influxdb-volume
+  namespace: bookstore
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-influxdb
+  namespace: bookstore
+  labels:
+    app: bookstore-influxdb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstore-influxdb
+  template:
+    metadata:
+      labels:
+        app: bookstore-influxdb
+    spec:
+      containers:
+        - name: bookstore-influxdb
+          image: influxdb:1.8
+          ports:
+            - containerPort: 8086
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/lib/influxdb
+              name: bookstore-influxdb-volume
+              subPath: data
+      volumes:
+        - name: bookstore-influxdb-volume
+          persistentVolumeClaim:
+            claimName: bookstore-influxdb-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-influxdb
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8086"
+      port: 8086
+      targetPort: 8086
+  selector:
+    app: bookstore-influxdb

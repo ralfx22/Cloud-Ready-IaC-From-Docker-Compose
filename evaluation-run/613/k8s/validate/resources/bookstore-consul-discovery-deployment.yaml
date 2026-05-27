@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-consul-discovery
+  namespace: bookstore
+  labels:
+    app: bookstore-consul-discovery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-consul-discovery
+  template:
+    metadata:
+      labels:
+        app: bookstore-consul-discovery
+    spec:
+      containers:
+        - name: bookstore-consul-discovery
+          image: hashicorp/consul
+          args:
+            - agent
+            - -server
+            - -bootstrap-expect=1
+            - -ui
+            - -client=0.0.0.0
+            - -bind=127.0.0.1
+          ports:
+            - containerPort: 8500
+              protocol: TCP
+          resources:
+            requests:
+              memory: "256Mi"
+            limits:
+              memory: "256Mi"
+      restartPolicy: Always

@@ -1,0 +1,58 @@
+{
+  "k8s": {
+    "namespace": "quotes-app",
+    "services": [
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Deploy into a dedicated non-default namespace named quotes-app. All workloads are stateless Deployments with baseline replica count 1; no StatefulSets or PVCs are needed because neither Compose nor Kompose defines any volumes.",
+    "Config classification: QUOTES_API is non-secret runtime configuration and can stay as an environment variable or be moved to a ConfigMap. No Secret inputs are indicated. No bind mounts are present, so any frontend assets, app config files, or packaged resources must be baked into the images.",
+    "Ingress baseline: Kompose generated no Ingress, so add a minimal internet-facing AWS ALB Ingress to the frontend service for end-to-end validation. HTTP-only is sufficient for the baseline because no TLS or ACM certificate requirement is expressed.",
+    "Compose vs Kubernetes discrepancy: Docker Compose publishes api on 3000 and frontend on 8080, but the generated Kubernetes manifests create only internal Services and no external entrypoint. For minimal baseline, expose only frontend through ALB and keep api internal.",
+    "Dependency gap: api is configured with QUOTES_API=http://quotes:5000, which implies an internal quotes HTTP endpoint. Kompose did not generate a quotes Service because the Compose service had no ports. A working baseline requires an internal ClusterIP Service for quotes on port 5000; the current Kompose output alone would not satisfy api-to-quotes connectivity.",
+    "Node sizing math using t3.small and 1.4 GiB allocatable per node: estimated app memory requests are quotes 512Mi (runtime unknown, defaulted), api 512Mi (runtime unknown, defaulted), frontend 128Mi (likely lightweight web server because it serves on container port 80). Baseline platform pods add about CoreDNS 2x70Mi and AWS Load Balancer Controller 200Mi. Total planned pod memory is about 1492Mi, so 1 node is too tight and desired_node_count is 2.",
+    "Mandatory EKS baseline add-ons: provision managed vpc-cni, kube-proxy, and coredns, and ensure vpc-cni is installed before compute. Enable OIDC and IRSA. Because ALB Ingress is required, include AWS Load Balancer Controller with least-privilege IRSA permissions. Do not add EBS CSI, metrics-server, ExternalDNS, cert-manager, or other extras because no trigger exists.",
+    "Network plan: use 2 public and 2 private subnets across at least 2 AZs. Place the managed node group in private subnets and the internet-facing ALB in public subnets. NAT is required for node egress. Public subnets must carry ALB discovery tags such as kubernetes.io/role/elb=1 plus the standard cluster discovery tag.",
+    "Operational gap: Compose references local build contexts only. Images named api, frontend, and quotes must be built and published to a reachable container registry before deployment; registry selection is omitted because it is not specified.",
+    "Kompose warnings/limitations: Compose version '2' is reported as obsolete. Kompose warned that quotes would not be created as a Service because no ports were specified. Compose depends_on does not create Kubernetes startup ordering, so the services still need normal readiness/retry behavior."
+  ]
+}

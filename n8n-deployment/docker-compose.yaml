@@ -1,0 +1,20 @@
+services:
+  n8n:
+    build: .
+    #image: n8n-bachelor-thesis:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - KUBECONFIG=/data/kubeconfig/k3d.yaml
+      - NODES_EXCLUDE=["LocalFileTrigger"]
+      - N8N_RESTRICT_FILE_ACCESS_TO=/data/shared
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=8760 # 1 year in hours
+      - EXECUTIONS_DATA_PRUNE_MAX_COUNT=100000
+    user: "1000:1000"
+    volumes:
+      - /Users/ralf/Workspace/n8n:/home/node/.n8n
+      - /Users/ralf/Workspace/n8n/shared:/data/shared
+      - /Users/ralf/Workspace/n8n/kubeconfig:/data/kubeconfig

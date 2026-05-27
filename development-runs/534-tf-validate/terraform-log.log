@@ -1,0 +1,36 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for aws_load_balancer_controller_irsa...
+- aws_load_balancer_controller_irsa in .terraform/modules/aws_load_balancer_controller_irsa/modules/iam-role-for-service-accounts-eks
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for eks...
+- eks in .terraform/modules/eks
+- eks.eks_managed_node_group in .terraform/modules/eks/modules/eks-managed-node-group
+- eks.eks_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+- eks.fargate_profile in .terraform/modules/eks/modules/fargate-profile
+Downloading registry.terraform.io/terraform-aws-modules/kms/aws 4.0.0 for eks.kms...
+- eks.kms in .terraform/modules/eks.kms
+- eks.self_managed_node_group in .terraform/modules/eks/modules/self-managed-node-group
+- eks.self_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+- vpc in .terraform/modules/vpc
+
+Error: Unreadable module subdirectory
+
+The directory
+.terraform/modules/aws_load_balancer_controller_irsa/modules/iam-role-for-service-accounts-eks
+does not exist. The target submodule
+modules/iam-role-for-service-accounts-eks does not exist within the target
+module.
+=== terraform validate ===
+
+Error: Module not installed
+
+  on main.tf line 182:
+ 182: module "aws_load_balancer_controller_irsa" {
+
+This module's local cache directory
+.terraform/modules/aws_load_balancer_controller_irsa/modules/iam-role-for-service-accounts-eks
+could not be read. Run "terraform init" to install all modules required by
+this configuration.

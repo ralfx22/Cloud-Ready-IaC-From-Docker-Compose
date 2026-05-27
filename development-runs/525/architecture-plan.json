@@ -1,0 +1,66 @@
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": [
+      "10.0.1.0/24",
+      "10.0.2.0/24"
+    ],
+    "private_subnets": [
+      "10.0.101.0/24",
+      "10.0.102.0/24"
+    ],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline design: create a managed EKS cluster with a managed node group in private subnets, an OIDC provider enabled, and IRSA available. Use a dedicated non-default namespace named sme-app.",
+    "Mandatory EKS managed add-ons: vpc-cni, kube-proxy, and coredns. vpc-cni should be installed before node group creation. No other baseline add-ons are planned unless explicitly triggered.",
+    "Ingress plan: expose only the frontend through a public AWS ALB Ingress for smoke testing. Keep api and quotes internal. HTTP-only is sufficient for baseline validation because no domain name, ACM certificate, or TLS requirement was provided.",
+    "ALB support requires the AWS Load Balancer Controller with least-privilege IAM via IRSA. Public subnets must be tagged for internet-facing ALB discovery, and private subnets should host the worker nodes. A NAT gateway is required because nodes in private subnets need outbound internet access for Docker Hub image pulls and AWS API access; a single NAT gateway is sufficient for the minimal baseline.",
+    "Persistence/storage: no volumes, bind mounts, or named volumes appear in Compose or the generated manifests, so all services are treated as stateless Deployments. No PVCs are needed, no StatefulSets are needed, and the EBS CSI driver is not triggered.",
+    "Config/secrets classification: QUOTES_API=http://quotes:5000 is plain non-secret runtime configuration and can remain as an env var or ConfigMap-backed value. No secrets are present in the provided inputs. Any application code, static assets, or packaged resources must remain image-baked because there are no external config mounts to preserve.",
+    "Replica hints: the generated manifests set replicas=1 for api, frontend, and quotes, and there is no Compose scaling signal to increase them. The plan keeps one replica per application service for the baseline.",
+    "Node sizing math on t3.small using 1.4 Gi allocatable per node: estimated minimum app memory is quotes 512 Mi, api 512 Mi, frontend 512 Mi because the images do not clearly reveal lighter runtimes. Estimated baseline system/controller memory is aws-node about 64 Mi per node x2, kube-proxy about 50 Mi per node x2, coredns about 70 Mi x2, and AWS Load Balancer Controller about 128 Mi x1. Total estimated pod memory is about 2032 Mi, so one node would be undersized; two nodes provide about 2867 Mi allocatable and also keep total pod count well within the approximate t3.small pod limit.",
+    "Compose/Kubernetes discrepancy: Kompose created Deployments for all three services but only created Service objects for api and frontend. The api manifest still points QUOTES_API to http://quotes:5000, so a Kubernetes Service named quotes on port 5000 is required for a working baseline even though Kompose omitted it. The quotes port is inferred from the api environment variable because the quotes Deployment manifest does not declare a containerPort.",
+    "Port realization: api port 3000 and frontend service port 8080 targetPort 80 in Kubernetes are consistent with Compose intent. Frontend is the best primary public entrypoint; api should stay internal unless explicit external API exposure is requested later.",
+    "Compose depends_on does not translate into Kubernetes startup ordering. The workloads must tolerate dependency startup lag via retries/readiness behavior; no speculative init containers or sidecars are added in this baseline plan.",
+    "Kompose warnings to record: the Compose version field was flagged as obsolete, and the quotes service was not converted into a Service because no ports were declared."
+  ]
+}

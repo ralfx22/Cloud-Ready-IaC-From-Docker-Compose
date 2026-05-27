@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: transaction-api-postgres
+spec:
+  serviceName: transaction-api-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transaction-api-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transaction-api-postgres
+    spec:
+      containers:
+        - name: transaction-api-postgres
+          image: postgres:15.2
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-api-postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-api-postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-api-postgres-secret
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 5432
+              name: postgres
+              protocol: TCP
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: transaction-api-postgres-data

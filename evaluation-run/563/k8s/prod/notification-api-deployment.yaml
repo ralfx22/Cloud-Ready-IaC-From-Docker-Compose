@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  namespace: rrb-app
+  labels:
+    app: notification-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-api
+  template:
+    metadata:
+      labels:
+        app: notification-api
+    spec:
+      containers:
+        - name: notification-api
+          image: ralfx22/rrb-notification-api
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+      restartPolicy: Always

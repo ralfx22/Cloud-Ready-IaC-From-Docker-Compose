@@ -1,0 +1,86 @@
+```json
+{
+  "k8s": {
+    "namespace": "microservices-demo",
+    "services": [
+      {
+        "name": "user",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "project",
+        "type": "ClusterIP",
+        "port": 8081,
+        "exposed": false
+      },
+      {
+        "name": "task",
+        "type": "ClusterIP",
+        "port": 8082,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 8083,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": true
+      },
+      {
+        "name": "postgresql",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 4,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Node math: 8 pods (user, project, task, api, api-gateway, postgresql, mysql, mongo) * ~512Mi baseline request = 4096Mi total pod memory. 4x t3.small nodes (1.4GiB allocatable each) yield 5.6GiB total, safely satisfying the application requests plus AWS/K8s daemonsets.",
+    "Storage & State: Kompose extracted PVCs for mongo, mysql, and postgresql but bare Pods. In Kubernetes, stateful database components should use StatefulSets with VolumeClaimTemplates rather than static PVCs and Pods.",
+    "EBS CSI Add-on: Since the databases require PersistentVolumeClaims, the `aws-ebs-csi-driver` EKS add-on is mandatory. A default StorageClass backed by the CSI driver must also be created so PVCs provision correctly.",
+    "Ingress: The api-gateway service (port 9090) will be exposed externally using an AWS Application Load Balancer via the AWS Load Balancer Controller. HTTP-only setup is sufficient for initial validation tests.",
+    "Kompose Discrepancies: Kompose converted Compose services to raw 'Pod' resources with 'restartPolicy: Never'. These must be upgraded to 'Deployment' resources (for stateless apps) and 'StatefulSet' resources (for databases) to ensure reliability and self-healing.",
+    "NAT Gateway is required because nodes will be placed in private subnets and must download container images from public registries (Docker Hub)."
+  ]
+}
+```

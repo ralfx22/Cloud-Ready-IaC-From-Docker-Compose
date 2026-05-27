@@ -1,0 +1,195 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: microservice-demo
+  labels:
+    app: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+        - name: user
+          image: ralfx22/md-user
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50051
+              protocol: TCP
+          env:
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: DB_NAME
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: microservice-demo-secrets
+                  key: USER_DB_URI
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project
+  namespace: microservice-demo
+  labels:
+    app: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project
+  template:
+    metadata:
+      labels:
+        app: project
+    spec:
+      containers:
+        - name: project
+          image: ralfx22/md-project
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50052
+              protocol: TCP
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: microservice-demo-secrets
+                  key: PROJECT_DB_URI
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task
+  namespace: microservice-demo
+  labels:
+    app: task
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task
+  template:
+    metadata:
+      labels:
+        app: task
+    spec:
+      containers:
+        - name: task
+          image: ralfx22/md-task
+          imagePullPolicy: IfNotPresent
+          command:
+            - ./init
+          ports:
+            - containerPort: 50053
+              protocol: TCP
+          env:
+            - name: USER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: USER_ADDRESS
+            - name: PROJECT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: PROJECT_ADDRESS
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: microservice-demo-secrets
+                  key: TASK_DB_URI
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: microservice-demo
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/md-api
+          imagePullPolicy: IfNotPresent
+          args:
+            - serve
+          ports:
+            - containerPort: 50059
+              protocol: TCP
+          env:
+            - name: USER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: USER_ADDRESS
+            - name: PROJECT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: PROJECT_ADDRESS
+            - name: TASK_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: TASK_ADDRESS
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: microservice-demo
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/md-api
+          imagePullPolicy: IfNotPresent
+          args:
+            - proxy
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+          env:
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: HOST
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: PORT
+            - name: PROXY_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: PROXY_PORT

@@ -1,0 +1,87 @@
+```json
+{
+  "k8s": {
+    "namespace": "microservice-demo",
+    "services": [
+      {
+        "name": "user",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "project",
+        "type": "ClusterIP",
+        "port": 8081,
+        "exposed": false
+      },
+      {
+        "name": "task",
+        "type": "ClusterIP",
+        "port": 8082,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 8083,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": true
+      },
+      {
+        "name": "postgresql",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 4,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "High-level design: The application consists of stateless APIs and stateful databases. AWS Load Balancer Controller will provision an Internet-facing ALB in public subnets, routing traffic to the internal 'api-gateway' service on port 9090. HTTP-only is sufficient for baseline validation.",
+    "Node sizing math: 8 total pods. Assigned default 512 Mi each (user=512Mi, project=512Mi, task=512Mi, api=512Mi, api-gateway=512Mi, postgresql=512Mi, mysql=512Mi, mongo=512Mi). Total pod memory requests = 4096 Mi (~4.0 GiB). A t3.small node provides 1.4 GiB allocatable. 4.0 GiB / 1.4 GiB = ~2.85 nodes. Provisioning 4 nodes to provide sufficient capacity and margin for system DaemonSets.",
+    "Add-ons required: Core EKS add-ons (vpc-cni, kube-proxy, coredns) are mandatory, with vpc-cni deployed before node groups (before_compute = true). Since PVCs are required, the AWS EBS CSI driver must be installed and configured with a default StorageClass.",
+    "Discrepancy - Workload Types: Kompose generated naked Pods because the Compose file used 'restart: no' and 'restart: on-failure'. For a robust Kubernetes deployment, the stateless services (user, project, task, api, api-gateway) must be deployed as Deployments, and the stateful databases (postgresql, mysql, mongo) must be deployed as StatefulSets.",
+    "Stateful constraints: 'postgresql' uses /var/lib/postgresql/data; 'mysql' uses /var/lib/mysql; 'mongo' uses /data/db and /data/configdb. All require PVCs provided via the EBS CSI driver. Since the databases are single-replica setups for this baseline, ReadWriteOnce PVCs are appropriate.",
+    "Kompose warning check: 'File don't exist... stat' warnings appeared because Kompose attempted to evaluate local directory structures for volume mounts. We correctly ignore local bindings and use PVCs for the runtime database paths.",
+    "Missing dependencies: Kubernetes lacks Docker Compose's 'depends_on' functionality. App containers may crash and restart during initial boot while databases initialize. This will be naturally mitigated by standard Kubernetes CrashLoopBackOff and restart policies in Deployments/StatefulSets."
+  ]
+}
+```

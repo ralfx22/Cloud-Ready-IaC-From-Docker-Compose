@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-server
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: discovery-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discovery-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: discovery-server
+    spec:
+      containers:
+        - name: discovery-server
+          image: ralfx22/rrb-discovery-server
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+          ports:
+            - containerPort: 8761
+              name: http
+              protocol: TCP
+      restartPolicy: Always

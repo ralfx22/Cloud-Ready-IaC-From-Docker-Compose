@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-app
+  labels:
+    io.kompose.service: transaction-api-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: transaction-api-postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: transaction-api-postgres
+    spec:
+      containers:
+        - name: transaction-api-postgres
+          image: postgres:15.2
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-postgres-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: transaction-api-postgres-claim0
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: transaction-api-postgres-claim0
+          persistentVolumeClaim:
+            claimName: transaction-api-postgres-claim0

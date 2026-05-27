@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Applied dedicated namespace rrb-app from the architecture plan.
+    - Replaced Kompose standalone Pods for account-api, asset-management-api, notification-api, transaction-api, api-gateway, and discovery-server with Deployments for baseline manageability and stable Service selectors.
+    - Added missing ClusterIP Services for account-api, asset-management-api, notification-api, and transaction-api because Kompose did not generate them when Compose ports were absent. Service port 8080 is assumed from the Spring application pattern and recorded here as an assumption.
+    - Removed duplicate Service port entries that Kompose generated for several Services.
+    - Added ALB-backed Ingress for api-gateway as the only public entrypoint, per plan. HTTP only; no TLS/certificate ARN added because no ACM requirement was evidenced.
+    - Omitted all probes because no exact probe definitions were evidenced in source inputs.
+    - Preserved existing PVC-backed storage only for account-api-mongo, asset-management-api-mysql, grafana, and transaction-api-postgres.
+    - Removed Kompose PVC usage for config-server at /app/resources/config-files because the plan classifies it as config-like content, not persistent runtime data. No replacement ConfigMap content was created because the source directory was missing.
+    - Removed Kompose PVC usage for prometheus at /etc/prometheus/prometheus.yml because the plan classifies it as config-like content mounted to a file path. No replacement ConfigMap content was created because the source file was missing.
+    - Database volume mount paths remain /data/mongo, /data/mysql, and /data/postgres to match current manifests and source intent, but this is a runtime risk because these are nonstandard data directories for MongoDB, MySQL, and PostgreSQL images. Persistence may not protect actual database data unless images are configured accordingly.
+    - Added pod fsGroup for MongoDB, MySQL, PostgreSQL, and Grafana to improve mounted volume write access for non-root or image-managed users.
+    - Stateful systems remain Deployments rather than StatefulSets for minimal baseline consistency with current manifests; this is an improvement opportunity, especially for databases and Kafka.
+    - Rewrote Kafka networking to remove localhost advertisement and pod-external self references that conflict with Kubernetes topology. Controller quorum and controller listener now use pod-local 127.0.0.1; advertised client listener uses the Kubernetes Service DNS name on port 9092.
+    - Kafka configuration still uses a single combined broker/controller node and no persistence; this is acceptable only as a minimal validation baseline.
+    - Grafana credentials, MySQL credentials, and PostgreSQL credentials were moved into a standard Secret manifest to reduce plaintext configuration sprawl.
+    - Compose links for Grafana to Prometheus were not preserved because Kubernetes Service DNS supersedes links.
+    - Unresolved artifact/config issue: config-server may require external config files that were missing during Kompose conversion. If not baked into the image, the application may not function until a ConfigMap or image update is provided.
+    - Unresolved artifact/config issue: Prometheus may require a valid prometheus.yml that was missing during Kompose conversion. Without image-baked configuration or a later ConfigMap, Prometheus may fail to start correctly.
+    - Kompose warning preserved: compose version field is obsolete.
+    - Kompose warning preserved: Services account-api, asset-management-api, notification-api, and transaction-api were not created because ports were not specified.
+    - Kompose warning preserved: multiple host paths/files were missing and unsupported for account-api-mongo, asset-management-api-mysql, config-server config-files, grafana data, prometheus configuration, and transaction-api-postgres.
+    - Assumption: account-api, asset-management-api, notification-api, and transaction-api each listen on container port 8080 even though this was not evidenced in Compose or Kompose output.
+    - Assumption: no authentication-free health path for api-gateway was evidenced, so ingress exposes only /. If gateway authentication blocks validation, application configuration must add an unauthenticated health endpoint in a later step.

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project
+  namespace: microservice-demo
+  labels:
+    app: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project
+  template:
+    metadata:
+      labels:
+        app: project
+    spec:
+      containers:
+        - name: project
+          image: ralfx22/md-project
+          ports:
+            - containerPort: 50052
+              protocol: TCP
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-db-uris
+                  key: PROJECT_DB_URI

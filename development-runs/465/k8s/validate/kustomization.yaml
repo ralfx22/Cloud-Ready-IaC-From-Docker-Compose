@@ -1,0 +1,9 @@
+namespace: ns-465
+resources:
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/prometheus-config.yaml
+  - resources/secrets.yaml
+  - resources/services.yaml
+  - resources/storage.yaml
+  - resources/workloads.yaml

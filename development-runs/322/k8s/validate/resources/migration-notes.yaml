@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sme-migration-notes
+  namespace: sme-app
+data:
+  NOTES: |
+    - Namespace 'sme-app' created for deployment as requested by the architecture plan.
+    - Kompose warnings: 'version' is obsolete in the Compose file.
+    - Kompose did NOT create a Service for 'quotes' because the Compose service did not declare ports. The application manifest referenced quotes:5000 in the api environment variable.
+    - Action taken: created a ClusterIP Service 'quotes' exposing port 5000 and updated the quotes Deployment to declare containerPort 5000 so internal service discovery (http://quotes:5000) works as intended. If the actual quotes container listens on a different port, adjust the targetPort/containerPort accordingly.
+    - Services 'api' and 'frontend' are ClusterIP as specified in the plan. 'frontend' is marked exposed via an Ingress. 'api' and 'quotes' remain internal.
+    - Ingress: an ALB-style Ingress resource was created with ingressClassName: alb and common ALB annotations (scheme=internet-facing, target-type=ip). Host is set to 'example.com' as a placeholder. Replace the host with the desired domain or remove the host rule if using a hostless ALB setup.
+    - No PersistentVolumeClaims were found in Compose; none were created. No probes were added because none were evidenced in source manifests.
+    - No CRDs or non-standard APIs are required by these manifests. The AWS Load Balancer Controller (ALB controller) is required to honor the ALB annotations and ingressClassName; if that controller is not installed, consider creating a Service of type LoadBalancer for the frontend as a fallback.
+    - Review image pull policies, security contexts, resource requests/limits and liveness/readiness probes before promoting to production.

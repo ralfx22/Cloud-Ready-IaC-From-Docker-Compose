@@ -1,0 +1,10 @@
+namespace: ns-551
+resources:
+  - resources/apps.yaml
+  - resources/configmaps.yaml
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/secrets.yaml
+  - resources/services.yaml
+  - resources/storage.yaml

@@ -1,0 +1,10 @@
+namespace: ns-317
+resources:
+  - resources/migration-notes.yaml
+  - resources/sme-app-api-deployment.yaml
+  - resources/sme-app-api-service.yaml
+  - resources/sme-app-frontend-deployment.yaml
+  - resources/sme-app-frontend-service.yaml
+  - resources/sme-app-ingress.yaml
+  - resources/sme-app-quotes-deployment.yaml
+  - resources/sme-app-quotes-service.yaml

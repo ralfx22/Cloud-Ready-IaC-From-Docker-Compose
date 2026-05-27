@@ -1,0 +1,25 @@
+[33mWARN[0m /data/shared/608/docker-compose.yml: `version` is obsolete 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/data/db: no such file or directory 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/data/configdb: no such file or directory 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/var/lib/mysql: no such file or directory 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/var/lib/postgresql/data: no such file or directory 
+[36mINFO[0m Kubernetes file "kompose/api-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/api-gateway-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mongo-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mysql-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/postgresql-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/project-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/task-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/user-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/api-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/api-gateway-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mongo-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mongodb-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mongodb-config-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mysql-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/mysqldb-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/postgresql-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/postgresdb-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/project-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/task-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/user-pod.yaml" created 

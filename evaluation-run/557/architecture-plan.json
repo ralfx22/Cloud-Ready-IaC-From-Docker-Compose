@@ -1,0 +1,16 @@
+```json
+{
+  "k8s": {
+    "namespace": "rrb-app",
+    "services": [
+      { "name": "account-api", "type": "Deployment", "port": null, "exposed": false },
+      { "name": "account-api-mongo", "type": "Deployment", "port": 27017, "exposed": false },
+      { "name": "api-gateway", "type": "Deployment", "port": 8080, "exposed": true },
+      { "name": "asset-management-api", "type": "Deployment", "port": null, "exposed": false },
+      { "name": "asset-management-api-mysql", "type": "Deployment", "port": 3306, "exposed": false },
+      { "name": "config-server", "type": "Deployment", "port": 8888, "exposed": false },
+      { "name": "discovery-server", "type": "Deployment", "port": 8761, "exposed": false },
+      { "name": "grafana", "type": "Deployment", "port": 3000, "exposed": false },
+      { "name": "notification-api", "type": "Deployment", "port": null, "exposed": false },
+      { "name": "notification-api-kafka", "type": "Deployment", "port": 9092, "exposed": false },
+      { "name": "prometheus", "type":

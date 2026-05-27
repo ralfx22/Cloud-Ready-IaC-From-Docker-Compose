@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Replaced standalone Kompose Pods for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api with Deployments for safer restart behavior and label/selector consistency.
+    - Preserved ClusterIP Services only for services listed in the architecture plan.
+    - Added ALB-backed Ingress for api-gateway only, HTTP on port 80, internet-facing, target-type ip, per plan.
+    - No TLS/certificate ARN added because plan specifies HTTP-only baseline validation.
+    - No probes included. Existing manifests had no evidenced probe path/port/exec definitions, and unsupported inferred probes were intentionally omitted.
+    - account-api, asset-management-api, notification-api, and transaction-api still have no Service objects because the source intent provided no ports and the architecture plan explicitly notes only generated Service-backed workloads are routable.
+    - Secret-like environment variables for Grafana, MySQL, and PostgreSQL were moved into standard Kubernetes Secret objects.
+    - Kept existing PVC-backed persistence for account-api-mongo, asset-management-api-mysql, grafana, and transaction-api-postgres because PVCs were already generated and plan says to keep existing PVCs.
+    - account-api-mongo mount path /data/mongo was preserved from Compose/Kompose, but Mongo commonly uses /data/db; persistence may not capture actual runtime data.
+    - asset-management-api-mysql mount path /data/mysql was preserved from Compose/Kompose, but MySQL commonly uses /var/lib/mysql; persistence may not capture actual runtime data.
+    - transaction-api-postgres mount path /data/postgres was preserved from Compose/Kompose, but PostgreSQL commonly uses /var/lib/postgresql/data unless PGDATA is set; persistence may not capture actual runtime data.
+    - Removed config-server PVC and mount because /app/resources/config-files is config content, not persistent runtime data, and source files were unavailable.
+    - Removed Prometheus PVC and mount because /etc/prometheus/prometheus.yml is a config file path, not persistent runtime data, and source file contents were unavailable.
+    - Prometheus deployment may not start correctly without a valid configuration file; source prometheus-configuration.yml was unavailable during conversion.
+    - Config-server external config content from ./config-files was unavailable during conversion; workload now relies on image-baked configuration only.
+    - Kompose duplicate Service port entries were normalized to single port definitions.
+    - Kafka deployment exposes container ports 9092, 29092, and 29093, but only Service port 9092 is retained to match the architecture plan.
+    - Compose depends_on ordering is not implemented in Kubernetes; workloads must tolerate dependency startup timing.
+    - Recorded Kompose warnings: obsolete Compose version field, ignored host paths, missing local files/directories, and missing Service generation for account-api, asset-management-api, notification-api, and transaction-api due to absent ports.

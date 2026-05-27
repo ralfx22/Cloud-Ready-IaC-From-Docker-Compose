@@ -1,0 +1,21 @@
+namespace: ns-568
+resources:
+  - resources/account-api-mongo.yaml
+  - resources/account-api.yaml
+  - resources/api-gateway.yaml
+  - resources/asset-management-api-mysql.yaml
+  - resources/asset-management-api.yaml
+  - resources/config-server.yaml
+  - resources/configmaps.yaml
+  - resources/discovery-server.yaml
+  - resources/grafana.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/notification-api-kafka.yaml
+  - resources/notification-api.yaml
+  - resources/prometheus.yaml
+  - resources/pvcs.yaml
+  - resources/redis.yaml
+  - resources/transaction-api-postgres.yaml
+  - resources/transaction-api.yaml
+  - resources/zipkin.yaml

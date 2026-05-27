@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f 433-docker-compose.yml -o 433-k8s/
+    kompose.version: 1.34.0 (cbf2835db)
+  labels:
+    io.kompose.service: asset-management-api-mysql
+  name: asset-management-api-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: asset-management-api-mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f 433-docker-compose.yml -o 433-k8s/
+        kompose.version: 1.34.0 (cbf2835db)
+      labels:
+        io.kompose.service: asset-management-api-mysql
+    spec:
+      containers:
+        - args:
+            - --default-authentication-plugin=mysql_native_password
+          env:
+            - name: MYSQL_DATABASE
+              value: mysql
+            - name: MYSQL_PASSWORD
+              value: pwd
+            - name: MYSQL_ROOT_PASSWORD
+              value: pwd
+            - name: MYSQL_USER
+              value: admin
+          image: mysql:8.0.33
+          name: asset-management-api-mysql
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /data/mysql
+              name: asset-management-api-mysql-claim0
+      restartPolicy: Always
+      volumes:
+        - name: asset-management-api-mysql-claim0
+          persistentVolumeClaim:
+            claimName: asset-management-api-mysql-claim0

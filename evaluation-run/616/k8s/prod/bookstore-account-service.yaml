@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+  labels:
+    app: bookstore-account-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-account-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-account-service
+    spec:
+      containers:
+        - name: bookstore-account-service
+          image: ralfx22/bsa-account-service:latest
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+            - name: SERVER_PORT
+              value: "4001"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: ZIPKIN_HOST
+              value: "bookstore-zipkin:9411"
+            - name: SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS
+              value: "true"
+          ports:
+            - containerPort: 4001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "4001"
+      port: 4001
+      targetPort: 4001
+  selector:
+    app: bookstore-account-service

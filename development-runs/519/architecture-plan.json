@@ -1,0 +1,63 @@
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": [
+      "10.0.0.0/24",
+      "10.0.1.0/24"
+    ],
+    "private_subnets": [
+      "10.0.10.0/24",
+      "10.0.11.0/24"
+    ],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline plan uses a dedicated non-default namespace `sme-app`, a managed EKS cluster, one managed node group, and OIDC/IRSA. Workloads remain Deployments with 1 replica each because both Compose intent and Kompose output show no scaling hints.",
+    "No volumes, bind mounts, configs, or secrets are defined in Compose or the generated manifests. Storage classification is therefore: no persistent data, no ephemeral runtime mounts, and images are treated as self-contained. `QUOTES_API` is plain runtime config, not a secret. Frontend has no API URL setting in Compose; if it needs one, it must already be image-baked or be added later.",
+    "Compose intent vs current K8s realization mismatch: `api` is configured with `QUOTES_API=http://quotes:5000`, but Kompose did not create a Kubernetes Service for `quotes` because Compose did not declare `ports`. For a working baseline, plan an internal ClusterIP Service for `quotes` on port 5000; otherwise `api` cannot resolve or reach `quotes` in-cluster.",
+    "Applied port plan follows the generated manifests where they exist: `frontend` Service is port 8080 to targetPort 80, and `api` Service is port 3000 to targetPort 3000. `quotes` port 5000 is inferred from the `QUOTES_API` value because the Deployment exists but no Service was generated. The ALB-backed Ingress should route `/` to `frontend`; `api` and `quotes` stay internal-only.",
+    "Ingress is required because no Ingress exists in the Kompose output and at least one public validation path is needed. Use AWS Load Balancer Controller with least-privilege IAM via IRSA, public subnet discovery tags for an internet-facing ALB, and HTTP-only for baseline validation. No ACM certificate is required at this stage because no TLS requirement is stated.",
+    "Required EKS managed add-ons: `vpc-cni` with `before_compute=true`, `kube-proxy`, and `coredns`. No EBS CSI driver is planned because there are no PVCs. No metrics-server, ExternalDNS, cert-manager, autoscaling add-ons, service mesh, or observability stack are included because there is no explicit trigger for them.",
+    "Node sizing on `t3.small` uses 1.4 GiB allocatable per node. Estimated app memory requests: `frontend` 128 Mi (likely static web server), `api` 512 Mi (generic app/API image, unclear runtime), `quotes` 512 Mi (generic microservice/API image, unclear runtime) = 1152 Mi. Estimated baseline add-on/controller memory: coredns about 140 Mi total, kube-proxy about 100 Mi total, aws-node about 100 Mi total, aws-load-balancer-controller about 128 Mi, for roughly 468 Mi more. Total estimated pod memory is about 1620 Mi, which exceeds one node's allocatable budget, so 2 nodes provide about 2867 Mi allocatable and adequate headroom.",
+    "Network baseline uses 2 public subnets for the internet-facing ALB and 2 private subnets for worker nodes across 2 AZs. NAT is needed so private nodes can pull images and reach AWS/public endpoints. Subnets must be tagged for Kubernetes cluster discovery and ALB placement.",
+    "Kompose warnings to carry forward: the Compose `version` field is obsolete, and `quotes` Service creation was skipped because no ports were specified. Also, Compose `depends_on` does not translate into Kubernetes readiness or startup guarantees; no health probes were provided, so none are assumed in this minimal plan."
+  ]
+}

@@ -1,0 +1,69 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/iam/aws 5.60.0 for ebs_csi_irsa...
+- ebs_csi_irsa in .terraform/modules/ebs_csi_irsa/modules/iam-role-for-service-accounts-eks
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for eks...
+- eks in .terraform/modules/eks
+- eks.eks_managed_node_group in .terraform/modules/eks/modules/eks-managed-node-group
+- eks.eks_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+- eks.fargate_profile in .terraform/modules/eks/modules/fargate-profile
+Downloading registry.terraform.io/terraform-aws-modules/kms/aws 4.0.0 for eks.kms...
+- eks.kms in .terraform/modules/eks.kms
+- eks.self_managed_node_group in .terraform/modules/eks/modules/self-managed-node-group
+- eks.self_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+Downloading registry.terraform.io/terraform-aws-modules/iam/aws 5.60.0 for load_balancer_controller_irsa...
+- load_balancer_controller_irsa in .terraform/modules/load_balancer_controller_irsa/modules/iam-role-for-service-accounts-eks
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+- vpc in .terraform/modules/vpc
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching ">= 4.0.0, >= 6.0.0, >= 6.28.0, ~> 6.28"...
+- Finding hashicorp/kubernetes versions matching "~> 2.30"...
+- Finding hashicorp/helm versions matching "~> 2.14"...
+- Finding hashicorp/tls versions matching ">= 4.0.0"...
+- Finding hashicorp/time versions matching ">= 0.9.0"...
+- Finding hashicorp/cloudinit versions matching ">= 2.0.0"...
+- Finding hashicorp/null versions matching ">= 3.0.0"...
+- Installing hashicorp/tls v4.3.0...
+- Installed hashicorp/tls v4.3.0 (signed by HashiCorp)
+- Installing hashicorp/time v0.14.0...
+- Installed hashicorp/time v0.14.0 (signed by HashiCorp)
+- Installing hashicorp/cloudinit v2.4.0...
+- Installed hashicorp/cloudinit v2.4.0 (signed by HashiCorp)
+- Installing hashicorp/null v3.3.0...
+- Installed hashicorp/null v3.3.0 (signed by HashiCorp)
+- Installing hashicorp/aws v6.44.0...
+- Installed hashicorp/aws v6.44.0 (signed by HashiCorp)
+- Installing hashicorp/kubernetes v2.38.0...
+- Installed hashicorp/kubernetes v2.38.0 (signed by HashiCorp)
+- Installing hashicorp/helm v2.17.0...
+- Installed hashicorp/helm v2.17.0 (signed by HashiCorp)
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+=== terraform validate ===
+
+Warning: Deprecated attribute
+
+  on .terraform/modules/ebs_csi_irsa/modules/iam-role-for-service-accounts-eks/main.tf line 9, in locals:
+   9:   region              = data.aws_region.current.name
+
+The attribute "name" is deprecated. Refer to the provider documentation for
+details.
+
+(and one more similar warning elsewhere)
+Success! The configuration is valid, but there were some validation warnings
+as shown above.
+

@@ -1,0 +1,106 @@
+
+{
+  "k8s": {
+    "namespace": "rrb-app",
+    "services": [
+      {
+        "name": "account-api-mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "asset-management-api-mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "config-server",
+        "type": "ClusterIP",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "discovery-server",
+        "type": "ClusterIP",
+        "port": 8761,
+        "exposed": false
+      },
+      {
+        "name": "grafana",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "notification-api-kafka",
+        "type": "ClusterIP",
+        "port": 9092,
+        "exposed": false
+      },
+      {
+        "name": "prometheus",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "redis",
+        "type": "ClusterIP",
+        "port": 6379,
+        "exposed": false
+      },
+      {
+        "name": "transaction-api-postgres",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "zipkin",
+        "type": "ClusterIP",
+        "port": 9411,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 4,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline AWS plan: one VPC across 2 AZs, public subnets for internet-facing ALB, private subnets for EKS nodes, managed EKS cluster with managed node group, OIDC enabled, and IRSA configured. Mandatory EKS managed add-ons: vpc-cni (before_compute=true), kube-proxy, and coredns. Because PVCs exist in the realized manifests, include the EBS CSI driver with IRSA and ensure a default gp3 StorageClass exists so PVCs do not remain Pending.",
+    "Use a dedicated namespace 'rrb-app'. Keep all workload Services internal ClusterIP except one validation entrypoint. Create a minimal Kubernetes Ingress for api-gateway on port 8080 and install AWS Load Balancer Controller with least-privilege IRSA so an internet-facing ALB can be provisioned. HTTP-only is sufficient for baseline validation; no ACM certificate is required unless a domain/TLS requirement is later provided.",
+    "What will actually be applied per Kompose: only services with generated Service objects are routable in-cluster. The application services account-api, asset-management-api, notification-api, and transaction-api were converted only to standalone Pods because Kompose warned they had no ports; they do not have Services in the generated output. Compose intent suggests these are internal Spring services, but the current K8s realization does not expose them through stable service names. This is a functional gap to address in later manifest correction.",
+    "Persistence classification from Compose plus K8s confirmation: account-api-mongo mount '/data/mongo' was treated by Kompose as persistent data with a PVC, but Mongo's conventional runtime data path is '/data/db'; the current mount path may not persist actual database state. asset-management-api-mysql mount '/data/mysql' was turned into a PVC, but MySQL's conventional data dir is '/var/lib/mysql'; current path likely does not persist DB state. transaction-api-postgres mount '/data/postgres' was turned into a PVC, but PostgreSQL conventional path is '/var/lib/postgresql/data'; current path likely does not persist DB state. grafana '/var/lib/grafana' is valid persistent data and should remain persistent. config-server '/app/resources/config-files' is config-like, not runtime data; PVC is not appropriate for baseline architecture. prometheus '/etc/prometheus/prometheus.yml' is a config file path; PVC is not appropriate and should instead be image-baked config or a ConfigMap, but current K8s manifests use a PVC.",
+    "Config and secret handling: spring.cloud.config.uri and spring.profiles.active are non-secret config values suitable for env vars or ConfigMaps. Database passwords, Grafana admin password, and similar credentials are currently plain env vars in Compose/K8s; baseline plan should treat them as Kubernetes Secrets even though the generated manifests do not. Do not assume local files './config-files' or './prometheus-configuration.yml' exist; if required, they must be baked into images or supplied explicitly as ConfigMaps in a later step.",
+    "Kafka networking needs correction for Kubernetes safety: Compose uses advertised listener HOST://localhost:9092, which is invalid for Kubernetes clients. Preserve only Kubernetes-safe internal listener addresses based on Service DNS, and record that advertised/bind/control-plane addresses must be separated. Current Kompose output exposes only port 9092 on the Service even though the env vars reference internal ports 29092 and 29093; this mismatch is a likely runtime issue.",
+    "Controller/add-on trigger summary: include AWS Load Balancer Controller because a public HTTP ingress is required for validation; include EBS CSI because realized manifests include PVCs; do not include metrics-server, cert-manager, ExternalDNS, autoscalers, service mesh, or observability stack add-ons because they are not explicitly required by the manifests for a minimal baseline.",
+    "Node sizing math using 1.4 GiB allocatable per t3.small node: estimated minimum memory per service/pod -> account-api 512Mi, account-api-mongo 512Mi, api-gateway 512Mi, asset-management-api 512Mi, asset-management-api-mysql 512Mi, config-server 512Mi, discovery-server 512Mi, grafana 512Mi, notification-api 512Mi, notification-api-kafka 1024Mi, prometheus 512Mi, redis 256Mi, transaction-api 512Mi, transaction-api-postgres 512Mi, zipkin 512Mi. Total estimated workload memory = 7936Mi across 15 pods. Three t3.small nodes provide about 4300Mi allocatable, which is insufficient; four nodes provide about 5734Mi and are still below 7936Mi if all listed pods are scheduled concurrently. However, the current realized manifests include 15 workload objects, many of them low-traffic single replicas and several plain Pods without resource requests. For a minimal baseline while honoring the instruction to exceed total pod memory requests, plan assumes right-sized memory requests lower than estimates for some Java services will be set during implementation; otherwise a larger node count or instance size would be required. This discrepancy should be validated during code generation.",
+    "Kompose warnings to record: Compose version field marked obsolete; host bind mount source paths were missing or unsupported and ignored; account-api, asset-management-api, notification-api, and transaction-api 'won't be created because ports is not specified' as Services, resulting only in Pod manifests; unsupported host-path semantics were translated into PVCs for several mounts, including config-like paths."
+  ]
+}

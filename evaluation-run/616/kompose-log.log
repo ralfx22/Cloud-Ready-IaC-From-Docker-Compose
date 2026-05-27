@@ -1,0 +1,42 @@
+[33mWARN[0m /data/shared/616/docker-compose.yml: `version` is obsolete 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/var/lib/chronograf: no such file or directory 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/var/lib/grafana: no such file or directory 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/var/lib/influxdb: no such file or directory 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat :/var/lib/mysql: no such file or directory 
+[33mWARN[0m Skip file in path /var/run/docker.sock       
+[36mINFO[0m Kubernetes file "kompose/bookstore-account-service-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-billing-service-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-catalog-service-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-chronograf-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-consul-discovery-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-frontend-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-grafana-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-influxdb-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-kapacitor-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-mysql-db-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-order-service-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-payment-service-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-prometheus-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-telegraf-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-zipkin-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-zuul-api-gateway-server-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-account-service-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-billing-service-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-catalog-service-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-chronograf-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/booksture-chronograf-volume-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-consul-discovery-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-frontend-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-grafana-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-graphana-volume-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-influxdb-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/booksture-influxdb-volume-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-kapacitor-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-mysql-db-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-db-volume-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-order-service-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-payment-service-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-prometheus-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-telegraf-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-zipkin-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/bookstore-zuul-api-gateway-server-deployment.yaml" created 

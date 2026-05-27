@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+  labels:
+    app.kubernetes.io/part-of: sme-app
+data:
+  notes: |
+    - Namespace set from architecture plan: sme-app.
+    - Workloads kept as Deployments per architecture plan; no StatefulSets, PVCs, or hostPath volumes were added because no persistence intent was evidenced.
+    - Services aligned to plan: frontend exposed internally on ClusterIP port 8080, api on ClusterIP port 3000, quotes on ClusterIP port 5000.
+    - Public exposure implemented only for frontend through a standard networking.k8s.io/v1 Ingress with ingressClassName=alb and AWS Load Balancer Controller annotations for an internet-facing HTTP listener.
+    - The frontend Service remains ClusterIP; ALB is expected to target pods through the Ingress using target-type=ip.
+    - The quotes Service was added because Kompose did not create it, but api is configured with QUOTES_API=http://quotes:5000 and therefore requires in-cluster DNS/service discovery.
+    - No probes were included because no exact liveness/readiness/startup probe definitions were evidenced in the Compose input or generated manifests.
+    - No Secret resources were added because no secrets were evidenced in the inputs.
+    - Compose depends_on ordering was not translated because Kubernetes does not provide startup ordering semantics equivalent to Docker Compose.
+    - Kompose warning recorded: docker-compose version field is obsolete.
+    - Kompose warning recorded: Service "quotes" won't be created because ports is not specified.
+  unresolved-issues: |
+    - Runtime behavior of the container images was not validated here; successful deployment depends on the referenced images being available and starting correctly on Kubernetes.
+    - The quotes workload is assumed to listen on TCP port 5000 based on the api configuration and architecture plan; if the image listens on a different port, the quotes Service and Deployment containerPort must be adjusted.
+    - No health endpoint paths were evidenced for any workload, so ALB health behavior relies on the backend responding acceptably on the routed path.
+    - No TLS/ACM certificate information was provided, so the Ingress is configured for HTTP only.

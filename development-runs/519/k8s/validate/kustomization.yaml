@@ -1,0 +1,11 @@
+namespace: ns-519
+resources:
+  - resources/00-namespace.yaml
+  - resources/10-api-deployment.yaml
+  - resources/11-api-service.yaml
+  - resources/20-quotes-deployment.yaml
+  - resources/21-quotes-service.yaml
+  - resources/30-frontend-deployment.yaml
+  - resources/31-frontend-service.yaml
+  - resources/40-frontend-ingress.yaml
+  - resources/99-migration-notes.yaml

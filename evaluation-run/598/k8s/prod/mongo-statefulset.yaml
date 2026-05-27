@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: microservice-demo
+  labels:
+    app: mongo
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: mongo
+          image: mongo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_INITDB_DATABASE
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - "db.runCommand({ ping: 1 }).ok"
+            failureThreshold: 20
+            periodSeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - "db.runCommand({ ping: 1 }).ok"
+            failureThreshold: 20
+            periodSeconds: 5
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: 512Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: mongodb
+              mountPath: /data/db
+            - name: mongodb-config
+              mountPath: /data/configdb
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+    - metadata:
+        name: mongodb-config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi

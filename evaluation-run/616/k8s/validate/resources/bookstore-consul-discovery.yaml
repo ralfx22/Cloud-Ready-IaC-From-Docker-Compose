@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-consul-discovery
+  namespace: bookstore
+  labels:
+    app: bookstore-consul-discovery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-consul-discovery
+  template:
+    metadata:
+      labels:
+        app: bookstore-consul-discovery
+    spec:
+      containers:
+        - name: bookstore-consul-discovery
+          image: hashicorp/consul
+          ports:
+            - containerPort: 8500
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-consul-discovery
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8500"
+      port: 8500
+      targetPort: 8500
+  selector:
+    app: bookstore-consul-discovery

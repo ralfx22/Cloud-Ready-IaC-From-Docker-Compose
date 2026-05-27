@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |-
+    Migration and assumptions summary:
+    - Namespace created: 'sme-app' (all resources placed into this namespace).
+    - Kompose produced Deployments for api, frontend, and quotes. Kompose did not create a Service for 'quotes' because the Compose file did not declare ports for that service. The Compose intent (api environment QUOTES_API=http://quotes:5000) implies quotes listens on port 5000; we created a ClusterIP Service 'quotes' on port 5000 and exposed containerPort 5000 in the quotes Deployment to restore internal DNS connectivity.
+    - Services:
+      * frontend: ClusterIP on port 8080 -> targetPort 80. Exposed via ALB Ingress for baseline validation.
+      * api: ClusterIP on port 3000 -> targetPort 3000. Internal only.
+      * quotes: ClusterIP on port 5000 -> targetPort 5000. Internal only.
+    - Ingress: an ALB-backed Ingress (ingressClassName: alb) created for the frontend service. It is HTTP-only (internet-facing) to allow end-to-end validation. The Ingress includes standard AWS Load Balancer Controller annotations (scheme, target-type, listen-ports). TLS/certificate not configured (baseline HTTP only).
+    - Probes: no liveness/readiness probes were present in the original manifests or explicit Compose evidence for exact probe paths/ports/execs, so probes have been omitted as required.
+    - Storage: no volumes or PVCs were detected in the Compose manifests. No PVCs were added beyond the above services. No hostPath resources were created.
+    - Notes from Kompose warnings:
+      * WARN: docker-compose 'version' is obsolete.
+      * WARN: Service 'quotes' wasn't created by Kompose because no 'ports' were specified; this manifest set adds that Service to match the Compose intent.
+    - Items requiring confirmation before production:
+      * Confirm that the quotes application listens on port 5000. If different, adjust quotes Service and Deployment containerPort accordingly.
+      * If TLS is required for the ALB, provide an ACM certificate ARN to add to the Ingress annotations.
+      * The AWS Load Balancer Controller requires IRSA/IAM role and properly tagged public subnets; ensure these are provisioned in the cluster environment.
+    - This manifest set uses only standard Kubernetes APIs and does not assume any CRDs are installed.

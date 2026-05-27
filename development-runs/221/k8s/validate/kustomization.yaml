@@ -1,0 +1,6 @@
+namespace: ns-221
+resources:
+  - resources/10-quotes-deployment-service.yaml
+  - resources/20-api-deployment-service.yaml
+  - resources/30-frontend-deployment-service.yaml
+  - resources/40-ingress.yaml

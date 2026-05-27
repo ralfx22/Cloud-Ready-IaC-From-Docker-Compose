@@ -1,0 +1,854 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: asset-management-api-mysql-secret
+  namespace: rrb-app
+type: Opaque
+stringData:
+  MYSQL_PASSWORD: pwd
+  MYSQL_ROOT_PASSWORD: pwd
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-secret
+  namespace: rrb-app
+type: Opaque
+stringData:
+  GF_SECURITY_ADMIN_USER: admin
+  GF_SECURITY_ADMIN_PASSWORD: password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: transaction-api-postgres-secret
+  namespace: rrb-app
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: admin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: account-api-mongo-claim0
+  name: account-api-mongo-claim0
+  namespace: rrb-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: asset-management-api-mysql-claim0
+  name: asset-management-api-mysql-claim0
+  namespace: rrb-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: grafana-claim0
+  name: grafana-claim0
+  namespace: rrb-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: transaction-api-postgres-claim0
+  name: transaction-api-postgres-claim0
+  namespace: rrb-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api
+    io.kompose.service: account-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: account-api
+      io.kompose.service: account-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: account-api
+        io.kompose.service: account-api
+    spec:
+      containers:
+        - name: account-api
+          image: ralfx22/rrb-account-api
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api-mongo
+    io.kompose.service: account-api-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: account-api-mongo
+      io.kompose.service: account-api-mongo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: account-api-mongo
+        io.kompose.service: account-api-mongo
+    spec:
+      containers:
+        - name: account-api-mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          volumeMounts:
+            - name: account-api-mongo-claim0
+              mountPath: /data/db
+      volumes:
+        - name: account-api-mongo-claim0
+          persistentVolumeClaim:
+            claimName: account-api-mongo-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: api-gateway
+    io.kompose.service: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+      io.kompose.service: api-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api-gateway
+        io.kompose.service: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/rrb-api-gateway
+          env:
+            - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+              value: TRACE
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: asset-management-api
+    io.kompose.service: asset-management-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: asset-management-api
+      io.kompose.service: asset-management-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: asset-management-api
+        io.kompose.service: asset-management-api
+    spec:
+      containers:
+        - name: asset-management-api
+          image: ralfx22/rrb-asset-management-api
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: asset-management-api-mysql
+    io.kompose.service: asset-management-api-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: asset-management-api-mysql
+      io.kompose.service: asset-management-api-mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: asset-management-api-mysql
+        io.kompose.service: asset-management-api-mysql
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: asset-management-api-mysql
+          image: mysql:8.0.33
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          env:
+            - name: MYSQL_DATABASE
+              value: mysql
+            - name: MYSQL_USER
+              value: admin
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: asset-management-api-mysql-secret
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: asset-management-api-mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          volumeMounts:
+            - name: asset-management-api-mysql-claim0
+              mountPath: /var/lib/mysql
+              subPath: mysql-data
+      volumes:
+        - name: asset-management-api-mysql-claim0
+          persistentVolumeClaim:
+            claimName: asset-management-api-mysql-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: config-server
+    io.kompose.service: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+      io.kompose.service: config-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: config-server
+        io.kompose.service: config-server
+    spec:
+      containers:
+        - name: config-server
+          image: ralfx22/rrb-config-server
+          env:
+            - name: spring.profiles.active
+              value: docker
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-server
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: discovery-server
+    io.kompose.service: discovery-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discovery-server
+      io.kompose.service: discovery-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: discovery-server
+        io.kompose.service: discovery-server
+    spec:
+      containers:
+        - name: discovery-server
+          image: ralfx22/rrb-discovery-server
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+          ports:
+            - containerPort: 8761
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: grafana
+    io.kompose.service: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+      io.kompose.service: grafana
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grafana
+        io.kompose.service: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.0.1
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: GF_SECURITY_ADMIN_USER
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: GF_SECURITY_ADMIN_PASSWORD
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+            - name: grafana-claim0
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: grafana-claim0
+          persistentVolumeClaim:
+            claimName: grafana-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: notification-api
+    io.kompose.service: notification-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-api
+      io.kompose.service: notification-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-api
+        io.kompose.service: notification-api
+    spec:
+      containers:
+        - name: notification-api
+          image: ralfx22/rrb-notification-api
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api-kafka
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: notification-api-kafka
+    io.kompose.service: notification-api-kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-api-kafka
+      io.kompose.service: notification-api-kafka
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-api-kafka
+        io.kompose.service: notification-api-kafka
+    spec:
+      containers:
+        - name: notification-api-kafka
+          image: confluentinc/cp-kafka:7.4.0
+          env:
+            - name: CLUSTER_ID
+              value: MkU3OEVANTcwNTJENDM2Qk
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: broker,controller
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+            - name: KAFKA_LISTENERS
+              value: PLAINTEXT://0.0.0.0:9092,CONTROLLER://127.0.0.1:29093
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: PLAINTEXT://notification-api-kafka:9092
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: CONTROLLER
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: 1@127.0.0.1:29093
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: PLAINTEXT
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: prometheus
+    io.kompose.service: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+      io.kompose.service: prometheus
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+        io.kompose.service: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.43.0
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: redis
+    io.kompose.service: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      io.kompose.service: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        io.kompose.service: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.0.11
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: transaction-api
+    io.kompose.service: transaction-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transaction-api
+      io.kompose.service: transaction-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transaction-api
+        io.kompose.service: transaction-api
+    spec:
+      containers:
+        - name: transaction-api
+          image: ralfx22/rrb-transaction-api
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: transaction-api-postgres
+    io.kompose.service: transaction-api-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transaction-api-postgres
+      io.kompose.service: transaction-api-postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transaction-api-postgres
+        io.kompose.service: transaction-api-postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: transaction-api-postgres
+          image: postgres:15.2
+          env:
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: root
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-api-postgres-secret
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - name: transaction-api-postgres-claim0
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+      volumes:
+        - name: transaction-api-postgres-claim0
+          persistentVolumeClaim:
+            claimName: transaction-api-postgres-claim0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: zipkin
+    io.kompose.service: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zipkin
+      io.kompose.service: zipkin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zipkin
+        io.kompose.service: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:2.24.0
+          ports:
+            - containerPort: 9411
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api-mongo
+    io.kompose.service: account-api-mongo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: account-api-mongo
+    io.kompose.service: account-api-mongo
+  ports:
+    - name: tcp-27017
+      port: 27017
+      targetPort: 27017
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: api-gateway
+    io.kompose.service: api-gateway
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: api-gateway
+    io.kompose.service: api-gateway
+  ports:
+    - name: tcp-8080
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: asset-management-api-mysql
+    io.kompose.service: asset-management-api-mysql
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: asset-management-api-mysql
+    io.kompose.service: asset-management-api-mysql
+  ports:
+    - name: tcp-3306
+      port: 3306
+      targetPort: 3306
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: config-server
+    io.kompose.service: config-server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: config-server
+    io.kompose.service: config-server
+  ports:
+    - name: tcp-8888
+      port: 8888
+      targetPort: 8888
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-server
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: discovery-server
+    io.kompose.service: discovery-server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: discovery-server
+    io.kompose.service: discovery-server
+  ports:
+    - name: tcp-8761
+      port: 8761
+      targetPort: 8761
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: grafana
+    io.kompose.service: grafana
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: grafana
+    io.kompose.service: grafana
+  ports:
+    - name: tcp-3000
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-api-kafka
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: notification-api-kafka
+    io.kompose.service: notification-api-kafka
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: notification-api-kafka
+    io.kompose.service: notification-api-kafka
+  ports:
+    - name: tcp-9092
+      port: 9092
+      targetPort: 9092
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: prometheus
+    io.kompose.service: prometheus
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: prometheus
+    io.kompose.service: prometheus
+  ports:
+    - name: tcp-9090
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: redis
+    io.kompose.service: redis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: redis
+    io.kompose.service: redis
+  ports:
+    - name: tcp-6379
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: transaction-api-postgres
+    io.kompose.service: transaction-api-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: transaction-api-postgres
+    io.kompose.service: transaction-api-postgres
+  ports:
+    - name: tcp-5432
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: zipkin
+    io.kompose.service: zipkin
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: zipkin
+    io.kompose.service: zipkin
+  ports:
+    - name: tcp-9411
+      port: 9411
+      targetPort: 9411
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  namespace: rrb-app
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080

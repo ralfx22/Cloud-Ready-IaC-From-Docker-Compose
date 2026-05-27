@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+  labels:
+    app: migration-notes
+data:
+  notes: |
+    === Migration Notes ===
+
+    1. [FIXED] Kompose did NOT generate a Service for 'quotes' because no 'ports'
+       key was specified in the Compose file. A ClusterIP Service targeting port 5000
+       has been manually created (quotes-service.yaml) so that the api service can
+       reach it via http://quotes:5000 as declared in the QUOTES_API env var.
+
+    2. [FIXED] Kompose generated the frontend Service with port 8080 -> targetPort 80
+       (mirroring the Compose host mapping 8080:80). The Service has been changed to
+       port 80 -> targetPort 80 for consistency with the ALB Ingress, which routes
+       directly to the Service on port 80.
+
+    3. [FIXED] Added containerPort 5000 to the quotes Deployment. The Compose file
+       did not declare ports, but the image (ralfx22/sme-quotes:v2) listens on 5000
+       as referenced by the api service.
+
+    4. [FIXED] Normalized all labels from Kompose-generated 'io.kompose.service'
+       to standard 'app' labels. Selectors and service selectors updated accordingly.
+
+    5. [FIXED] Set explicit resource requests and limits based on architecture plan
+       estimates: quotes 256Mi, api 256Mi, frontend 128Mi. CPU requests set to 100m
+       as a baseline.
+
+    6. [INFO] Kompose warning about 'version' key being obsolete — informational only,
+       no impact on generated manifests.
+
+    7. [INFO] All three services are stateless. No volumes, PVCs, or StorageClasses
+       are required.
+
+    8. [INFO] No readiness or liveness probes have been added. There is no evidence
+       of specific health-check endpoints (port+path or exec commands) for any of
+       the three services. Probes should be added once health endpoints are confirmed.
+
+    9. [INFO] No HPA configured. Metrics-server is not required for baseline.
+
+    10. [INFO] TLS is not configured on the ALB Ingress. HTTP-only (port 80) is used
+        for baseline validation. To enable HTTPS, add alb.ingress.kubernetes.io/certificate-arn
+        and alb.ingress.kubernetes.io/ssl-redirect annotations.
+
+    11. [PREREQUISITE] The AWS Load Balancer Controller must be installed in the
+        cluster for the ALB Ingress resource to be reconciled. Public subnets must
+        carry the tag 'kubernetes.io/role/elb: 1' for subnet auto-discovery.
+
+    12. [INFO] Removed Kompose-generated annotations (kompose.cmd, kompose.version)
+        from all resources as they are informational artifacts of the conversion
+        process and not needed at runtime.

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Public exposure baseline implemented only for api-gateway using a networking.k8s.io/v1 Ingress with ingressClassName alb and HTTP listener only.
+    - All Services are ClusterIP per plan, including the publicly reachable api-gateway behind Ingress.
+    - Removed duplicate Kompose-generated Service port entries where the same port was declared twice.
+    - Preserved existing PVC intent for account-api-mongo, asset-management-api-mysql, grafana, and transaction-api-postgres.
+    - Corrected database/runtime volume mount paths to image-appropriate locations:
+      * Mongo: /data/mongo -> /data/db
+      * MySQL: /data/mysql -> /var/lib/mysql using subPath mysql to avoid lost+found issues on freshly formatted volumes
+      * Postgres: /data/postgres -> /var/lib/postgresql/data using subPath pgdata to avoid lost+found issues on freshly formatted volumes
+    - Added pod securityContext.fsGroup for grafana and transaction-api-postgres to improve write access on mounted persistent volumes for non-root/container-managed users.
+    - Config-server PVC was removed because the source mount is config-like content, not runtime data. Replaced with emptyDir to keep manifest apply-safe, but application may fail unless config files are baked into the image or later provided via ConfigMap/Secret.
+    - Prometheus PVC-as-file-mount design was removed because mounting a PVC directly to /etc/prometheus/prometheus.yml is not appropriate. Replaced with a ConfigMap containing a minimal valid prometheus.yml.
+    - Kafka networking was corrected for single-pod topology. Internal listener/quorum settings were rewritten to pod-local addresses and service DNS for client advertisement:
+      * Advertised listeners now use PLAINTEXT://notification-api-kafka:9092
+      * Controller quorum voters now use 1@127.0.0.1:29093
+      * Listener bindings now use 0.0.0.0 instead of Service DNS names inside the pod
+      * Removed localhost external advertisement that would be invalid for Kubernetes clients
+    - account-api, asset-management-api, notification-api, and transaction-api remain standalone Pods because the architecture plan explicitly notes they were only converted as Pods and does not require promotion to Deployments/Services in this baseline.
+    - As a result, those four application Pods are not stably discoverable by DNS service name and may not form a fully working microservice baseline without further manifest correction.
+    - No probes were included because no exact HTTP path, port/path pair, or exec probe command was evidenced.
+    - No TLS was configured for Ingress because the plan states HTTP-only is sufficient for baseline validation and no domain/ACM certificate ARN was provided.
+    - Compose/Kompose warnings recorded:
+      * Compose version field marked obsolete.
+      * Services account-api, asset-management-api, notification-api, and transaction-api were not created by Kompose because ports were not specified.
+      * Host paths/files were missing or unsupported during conversion: account-api-mongo data, asset-management-api-mysql data, config-files, grafana data, prometheus configuration file, transaction-api-postgres data.
+    - Unresolved artifact/build/runtime issues:
+      * Application images may rely on config-server content under /app/resources/config-files that is not available from source bind mount in Kubernetes baseline.
+      * Internal applications without Services may fail if other components expect stable DNS names for them.
+      * Database and Grafana credentials remain simplistic placeholders migrated from Compose and should be rotated.
+      * Prometheus config is only a minimal placeholder and does not scrape any targets from the application stack.

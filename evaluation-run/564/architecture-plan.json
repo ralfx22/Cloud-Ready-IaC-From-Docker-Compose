@@ -1,0 +1,139 @@
+
+
+```json
+{
+  "k8s": {
+    "namespace": "rrb-app",
+    "services": [
+      {
+        "name": "account-api",
+        "type": "Deployment",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "account-api-mongo",
+        "type": "Deployment",
+        "port": 27017,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "Deployment",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "asset-management-api",
+        "type": "Deployment",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "asset-management-api-mysql",
+        "type": "Deployment",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "config-server",
+        "type": "Deployment",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "discovery-server",
+        "type": "Deployment",
+        "port": 8761,
+        "exposed": false
+      },
+      {
+        "name": "grafana",
+        "type": "Deployment",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "notification-api",
+        "type": "Deployment",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "notification-api-kafka",
+        "type": "Deployment",
+        "port": 9092,
+        "exposed": false
+      },
+      {
+        "name": "prometheus",
+        "type": "Deployment",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "redis",
+        "type": "Deployment",
+        "port": 6379,
+        "exposed": false
+      },
+      {
+        "name": "transaction-api",
+        "type": "Deployment",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "transaction-api-postgres",
+        "type": "Deployment",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "zipkin",
+        "type": "Deployment",
+        "port": 9411,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 6,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.3.0/24", "10.0.4.0/24"],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Memory estimates per service: account-api 512Mi, account-api-mongo 512Mi, api-gateway 512Mi, asset-management-api 512Mi, asset-management-api-mysql 512Mi, config-server 512Mi, discovery-server 512Mi, grafana 256Mi, notification-api 512Mi, notification-api-kafka 768Mi, prometheus 256Mi, redis 256Mi, transaction-api 512Mi, transaction-api-postgres 512Mi, zipkin 256Mi. Total estimated: ~7040Mi (~6.875 GiB). At 1.4 GiB allocatable per t3.small node, 6 nodes provide 8.4 GiB allocatable which covers the total with headroom.",
+    "Kompose generated bare Pods for account-api, asset-management-api, notification-api, transaction-api, api-gateway, and discovery-server because they lacked explicit 'ports' or had restart:on-failure. These must be converted to Deployments with proper ClusterIP Services for reliability and service discovery. account-api, asset-management-api, notification-api, and transaction-api are Spring Boot apps assumed to listen on 8080.",
+    "Volume mount discrepancies - MongoDB: Compose mounts to /data/mongo but standard MongoDB data dir is /data/db; must correct to /data/db in the PVC mount. MySQL: Compose mounts to /data/mysql but standard MySQL data dir is /var/lib/mysql; must correct to /var/lib/mysql. Postgres: Compose mounts to /data/postgres but standard Postgres data dir is /var/lib/postgresql/data; must correct to /var/lib/postgresql/data.",
+    "config-server volume ./config-files:/app/resources/config-files is config-like, not persistent data. The local directory does not exist and cannot be provided as a PVC. This should be a ConfigMap or the config files must be baked into the container image. The Kompose-generated PVC (config-server-claim0) will be dropped; a ConfigMap will be used if content is provided, otherwise the image must contain these files. Recording as a gap.",
+    "prometheus-configuration.yml bind-mount is a single config file; Kompose created a PVC which is incorrect. This must be a ConfigMap. The source file does not exist in the build context so the ConfigMap content must be provided separately. Recording as a gap.",
+    "Grafana volume /var/lib/grafana is genuine persistent data (dashboards, SQLite DB). PVC is appropriate.",
+    "PVCs needed: account-api-mongo (corrected to /data/db), asset-management-api-mysql (corrected to /var/lib/mysql), transaction-api-postgres (corrected to /var/lib/postgresql/data), grafana (/var/lib/grafana). These trigger the EBS CSI driver add-on requirement. A gp3 default StorageClass must be created so PVCs without explicit storageClassName are bound.",
+    "EBS CSI driver add-on required for PVC provisioning. IRSA role with AmazonEBSCSIDriverPolicy will be created.",
+    "AWS Load Balancer Controller required for ALB Ingress to api-gateway on port 8080. IRSA role with appropriate IAM policy will be created. Public subnets tagged with kubernetes.io/role/elb=1 and private subnets tagged with kubernetes.io/role/internal-elb=1 for ALB subnet auto-discovery. HTTP-only is sufficient for baseline validation; no ACM certificate planned.",
+    "Kafka ADVERTISED_LISTENERS HOST://localhost:9092 is invalid in Kubernetes. The HOST listener should be removed or changed. The PLAINTEXT listener notification-api-kafka:29092 is the correct intra-cluster address. Kafka clients (notification-api, transaction-api) should connect via notification-api-kafka:29092. The Kafka Service should expose port 29092 in addition to 9092.",
+    "Mandatory EKS add-ons: vpc-cni (before_compute=true), kube-proxy, coredns.",
+    "MySQL and Postgres credentials are in plaintext env vars in Compose. These should be Kubernetes Secrets in the final manifests rather than plain env vars, but for baseline we will create Secrets from the Compose values.",
+    "Kompose duplicate service ports (e.g. 27017 and 27017-tcp on account-api-mongo) must be deduplicated in final manifests.",
+    "All 15 services run as 15 pods (1 replica each). t3.small supports up to 11 pods per node (ENI-based limit). With 15 pods plus ~3 system pods (coredns x2, aws-node, kube-proxy per node), 6 nodes provide ample pod capacity.",
+    "Nodes run in private subnets; NAT gateway required for pulling container images from public registries."
+  ]
+}
+```

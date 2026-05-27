@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: api-gateway
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: api-gateway
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: api
+  ports:
+    - name: tcp
+      port: 8083
+      targetPort: 50059
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: user
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: user
+  ports:
+    - name: tcp
+      port: 8080
+      targetPort: 50051
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: project
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: project
+  ports:
+    - name: tcp
+      port: 8081
+      targetPort: 50052
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: task
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: task
+  ports:
+    - name: tcp
+      port: 8082
+      targetPort: 50053
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: postgresql
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: postgresql
+  ports:
+    - name: tcp
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: mysql
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mysql
+  ports:
+    - name: tcp
+      port: 3306
+      targetPort: 3306
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: mongo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mongo
+  ports:
+    - name: tcp
+      port: 27017
+      targetPort: 27017
+      protocol: TCP

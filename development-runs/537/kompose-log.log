@@ -1,0 +1,7 @@
+[33mWARN[0m /data/shared/537/docker-compose.yml: `version` is obsolete 
+[33mWARN[0m Service "quotes" won't be created because 'ports' is not specified 
+[36mINFO[0m Kubernetes file "kompose/api-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/frontend-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/api-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/frontend-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/quotes-deployment.yaml" created 

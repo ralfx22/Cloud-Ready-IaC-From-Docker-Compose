@@ -1,0 +1,36 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/iam/aws 5.60.0 for ebs_csi_irsa...
+- ebs_csi_irsa in .terraform/modules/ebs_csi_irsa/modules/iam-role-for-service-accounts-eks
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for eks...
+- eks in .terraform/modules/eks
+- eks.eks_managed_node_group in .terraform/modules/eks/modules/eks-managed-node-group
+- eks.eks_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+- eks.fargate_profile in .terraform/modules/eks/modules/fargate-profile
+Downloading registry.terraform.io/terraform-aws-modules/kms/aws 4.0.0 for eks.kms...
+- eks.kms in .terraform/modules/eks.kms
+- eks.self_managed_node_group in .terraform/modules/eks/modules/self-managed-node-group
+- eks.self_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+Downloading registry.terraform.io/terraform-aws-modules/iam/aws 5.60.0 for lb_controller_irsa...
+- lb_controller_irsa in .terraform/modules/lb_controller_irsa/modules/iam-role-for-service-accounts-eks
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+- vpc in .terraform/modules/vpc
+
+Error: Reserved argument name in provider block
+
+  on main.tf line 43, in provider "kubernetes":
+  43:   depends_on = [module.eks]
+
+The provider argument name "depends_on" is reserved for use by Terraform in a
+future version.
+=== terraform validate ===
+
+Error: Reserved argument name in provider block
+
+  on main.tf line 43, in provider "kubernetes":
+  43:   depends_on = [module.eks]
+
+The provider argument name "depends_on" is reserved for use by Terraform in a
+future version.

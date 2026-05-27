@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+  namespace: microservices-demo
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8080"
+      port: 8080
+      targetPort: 50051
+  selector:
+    app: user

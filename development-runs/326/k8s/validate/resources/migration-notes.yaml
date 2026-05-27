@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    - Created namespace 'sme-app' per architecture plan.
+    - Exposed frontend via an ALB Ingress (ingressClassName: alb) routing '/' to service 'frontend' (port 8080 -> targetPort 80). Host set to 'example.com' as a placeholder since no host was provided in the plan.
+    - Kept services as ClusterIP for internal-only services. 'api' (3000) and 'quotes' (5000) are internal ClusterIP services as requested.
+    - Kompose omitted the 'quotes' Service because no ports were defined in the compose file. Added an internal ClusterIP Service for 'quotes' on port 5000 and added containerPort 5000 to the quotes Deployment to restore in-cluster connectivity (api expects http://quotes:5000).
+    - All resources placed in the non-default namespace 'sme-app'.
+    - No liveness/readiness/startup probes were added because the original manifests did not provide explicit probe commands/paths/ports.
+    - No persistent volumes or PVCs were detected or added. If persistent storage is required later, add StorageClass and PVCs and update deployments/statefulsets accordingly.
+    - No imagePullSecrets, resource requests/limits, or service accounts were provided. These should be added for production environments.
+    - ALB Ingress annotations added assume the AWS Load Balancer Controller (AWS ALB controller) will be installed and IRSA configured as described in the architecture plan. This manifest does not install the controller.

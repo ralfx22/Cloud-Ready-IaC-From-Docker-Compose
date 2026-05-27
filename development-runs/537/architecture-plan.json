@@ -1,0 +1,61 @@
+```json
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": [
+      "10.0.101.0/24",
+      "10.0.102.0/24"
+    ],
+    "private_subnets": [
+      "10.0.1.0/24",
+      "10.0.2.0/24"
+    ],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Memory sizing math: quotes (512Mi) + api (512Mi) + frontend (512Mi) = ~1.5GiB total requested memory. A t3.small node provides 1.4GiB allocatable memory. Provisioning 2 nodes to ensure total cluster allocatable memory easily exceeds pod requests.",
+    "Kompose Warning Fix: Kompose skipped creating a Service for 'quotes' because ports weren't declared in the Compose file. However, the 'api' service depends on 'http://quotes:5000'. A ClusterIP service targeting port 5000 for 'quotes' has been manually planned to ensure DNS resolution and internal routing work.",
+    "Ingress strategy: The 'frontend' service is planned as the only public entrypoint. It will be exposed via an AWS Application Load Balancer using the AWS Load Balancer Controller. HTTP-only is planned for baseline validation.",
+    "State and Storage: All services are stateless. No PersistentVolumeClaims (PVCs) or EBS CSI drivers are required.",
+    "Add-on prerequisites: Baseline requires EKS managed add-ons (vpc-cni, kube-proxy, coredns). vpc-cni must be provisioned before compute creation (before_compute = true). AWS Load Balancer Controller requires OIDC/IRSA setup."
+  ]
+}
+```

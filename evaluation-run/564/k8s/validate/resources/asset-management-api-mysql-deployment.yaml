@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-app
+  labels:
+    app: asset-management-api-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-management-api-mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: asset-management-api-mysql
+    spec:
+      containers:
+        - name: asset-management-api-mysql
+          image: mysql:8.0.33
+          args:
+            - --default-authentication-plugin=mysql_native_password
+            - --ignore-db-dir=lost+found
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: asset-management-api-mysql-secret
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+      restartPolicy: Always
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: asset-management-api-mysql-data

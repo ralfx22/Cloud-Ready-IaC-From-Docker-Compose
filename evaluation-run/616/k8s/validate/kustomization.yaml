@@ -1,0 +1,20 @@
+namespace: ns-616
+resources:
+  - resources/bookstore-account-service.yaml
+  - resources/bookstore-billing-service.yaml
+  - resources/bookstore-catalog-service.yaml
+  - resources/bookstore-chronograf.yaml
+  - resources/bookstore-consul-discovery.yaml
+  - resources/bookstore-frontend.yaml
+  - resources/bookstore-grafana.yaml
+  - resources/bookstore-influxdb.yaml
+  - resources/bookstore-kapacitor.yaml
+  - resources/bookstore-mysql-db.yaml
+  - resources/bookstore-order-service.yaml
+  - resources/bookstore-payment-service.yaml
+  - resources/bookstore-prometheus.yaml
+  - resources/bookstore-telegraf.yaml
+  - resources/bookstore-zipkin.yaml
+  - resources/bookstore-zuul-api-gateway-server.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml

@@ -1,0 +1,85 @@
+```json
+{
+  "k8s": {
+    "namespace": "microservice-demo",
+    "services": [
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 8083,
+        "exposed": false
+      },
+      {
+        "name": "user",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "project",
+        "type": "ClusterIP",
+        "port": 8081,
+        "exposed": false
+      },
+      {
+        "name": "task",
+        "type": "ClusterIP",
+        "port": 8082,
+        "exposed": false
+      },
+      {
+        "name": "postgresql",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 4,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Node Sizing Math: 8 application services (api-gateway, api, user, project, task, postgresql, mysql, mongo). Defaulting to 512 Mi per pod = 4096 Mi total. t3.small provides 1.4 GiB allocatable. 4096 Mi / 1433 Mi = ~2.85 nodes. Adding 1 extra node to comfortably accommodate system add-ons (CoreDNS, AWS LBC, EBS CSI), resulting in a desired_node_count of 4.",
+    "Kompose Discrepancy: Kompose generated raw Pod objects instead of Deployments/StatefulSets due to 'restart: \"no\"' in the Docker Compose file. The final implementation must convert the stateless services into Deployments and the databases into StatefulSets for high availability and K8s best practices.",
+    "Storage & Add-ons: The databases (mysql, postgresql, mongo) require Persistent Volume Claims (PVCs) for their runtime data paths. The AWS EBS CSI driver add-on must be provisioned along with IRSA, and a default StorageClass must be explicitly defined to prevent PVCs from remaining in a Pending state.",
+    "Ingress Configuration: 'api-gateway' is the only externally reachable service. AWS Load Balancer Controller will be provisioned to manage an internet-facing Application Load Balancer mapping HTTP traffic to the 'api-gateway' ClusterIP service. No TLS is configured for the baseline; HTTP validation is sufficient.",
+    "Core EKS Add-ons: vpc-cni (with before_compute = true), kube-proxy, and coredns are mandatory baseline add-ons required for the cluster's nodes and pods to communicate successfully."
+  ]
+}
+```

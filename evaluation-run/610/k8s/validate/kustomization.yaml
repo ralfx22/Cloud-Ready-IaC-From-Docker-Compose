@@ -1,0 +1,10 @@
+namespace: ns-610
+resources:
+  - resources/00-namespace.yaml
+  - resources/01-secrets.yaml
+  - resources/02-persistent-storage.yaml
+  - resources/03-database.yaml
+  - resources/04-application-services.yaml
+  - resources/05-observability.yaml
+  - resources/06-ingress.yaml
+  - resources/99-migration-notes.yaml

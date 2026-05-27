@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: bookstore
+data:
+  notes.txt: |
+    - Node capacity calculation: Estimated ~5.6 GiB total request. Minimum 4 nodes required. Provisioning 5.
+    - Persistent storage required for MySQL, Grafana, InfluxDB, and Chronograf using PVCs. EKS AWS EBS CSI driver addon is mandatory.
+    - The Telegraf Docker socket mount (/var/run/docker.sock) was skipped as it is incompatible with standard EKS environments running containerd.
+    - BACKEND_API_GATEWAY_URL updated to point to internal Kubernetes service DNS (http://bookstore-zuul-api-gateway-server:8765).
+    - AWS Load Balancer Controller exposes the bookstore-frontend application on port 80 via Ingress.
+    - All persistent deployments use strategy 'Recreate' to avoid issues with ReadWriteOnce EBS volumes.
+    - Added securityContext.fsGroup=472 to Grafana to ensure volume write permissions.
+    - Added subPath 'data' to all PVC mounts to avoid lost+found directory issues on newly formatted EBS volumes.

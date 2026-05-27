@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Applied all resources to namespace rrb-app per architecture plan.
+    - Replaced Kompose-generated singleton Pod objects with Deployment objects for account-api, asset-management-api, api-gateway, discovery-server, notification-api, and transaction-api.
+    - Kept only standard Kubernetes APIs and added one public Ingress for api-gateway with ingressClassName alb and internet-facing annotations, HTTP only, matching the architecture plan.
+    - No probes were included because no exact probe path/port/exec evidence was provided in Compose or manifests.
+    - Services were normalized to single ports with corrected selectors and ClusterIP type.
+    - No additional Services were created for account-api, asset-management-api, notification-api, or transaction-api because the plan states only the existing service set is baseline-applied and Compose provided no ports for those apps.
+    - Moved Mongo persistent mount from /data/mongo to /data/db because /data/mongo is nonstandard for mongo:6.0.5 and likely would not persist runtime data correctly.
+    - Moved MySQL persistent mount from /data/mysql to /var/lib/mysql because /data/mysql is nonstandard for mysql:8.0.33 and likely would not persist runtime data correctly.
+    - Moved Postgres persistent mount from /data/postgres to /var/lib/postgresql/data and set PGDATA=/var/lib/postgresql/data/pgdata so initialization is compatible with volumes that contain lost+found.
+    - Added fsGroup for MySQL, Postgres, and Grafana to improve writable persistent volume behavior for non-root or image-managed users.
+    - Removed config-server PVC and volume mount because /app/resources/config-files is config-like, not persistent runtime data, and the source host content was unavailable during conversion.
+    - Removed prometheus PVC and invalid file-path volume mount because /etc/prometheus/prometheus.yml is a config file path, not persistent runtime data. No replacement ConfigMap content was created because the source file content was not provided.
+    - Kafka networking settings were rewritten for single-pod KRaft operation in Kubernetes: removed HOST listener usage, advertised only notification-api-kafka:9092 for clients, and changed controller quorum/self-reference to 127.0.0.1:29093 for pod-local control-plane traffic.
+    - Redis, Kafka, Prometheus, and Zipkin remain without persistence because Compose did not clearly specify durable runtime storage for them.
+    - Grafana admin credentials, MySQL passwords, and Postgres password were moved from plain env to Secrets while preserving effective environment wiring.
+    - Kompose warnings recorded: obsolete Compose version field; services without ports were not given Services; host paths and files were unavailable during conversion; host bind semantics are not portable to Kubernetes.
+    - Readiness/start order from depends_on is not preserved by Kubernetes and may require later application-level retry logic.

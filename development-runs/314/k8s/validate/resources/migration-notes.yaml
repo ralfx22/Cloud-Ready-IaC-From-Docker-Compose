@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    - Namespace: deployed resources into namespace 'sme-app' per architecture plan.
+    - Ingress: architecture requires an AWS ALB ingress. Created a networking.k8s.io/v1 Ingress (ingressClassName: "alb") with common ALB annotations. Host set to "example.com" as a placeholder (replace with real host).
+    - Services: ensured ClusterIP Services for frontend (port 8080 -> targetPort 80), api (3000) and added a quotes service (5000) which Kompose omitted. This aligns with the api's QUOTES_API environment variable (http://quotes:5000).
+    - Deployments: added containerPort 5000 to quotes Deployment (Kompose omitted ports because compose had none). Kept Deployments rather than StatefulSets because no stateful behavior is indicated.
+    - Probes: no liveness/readiness/startup probes were added because Compose did not provide explicit probe details (paths/ports/exec). Per migration rules, probes are omitted unless exact values are evidenced.
+    - Storage: no PVCs found in the source; no PVCs were created. If persistent storage is required later, add PVCs and the AWS EBS CSI driver.
+    - Kompose warnings: "version is obsolete" (compose v2) and "Service \"quotes\" won't be created because 'ports' is not specified". The latter is addressed by creating the quotes Service.
+    - Networking: host port mappings from Docker Compose (host:container) are not applicable in Kubernetes; external access is provided via ALB Ingress.
+    - AWS/EKS notes from plan: ensure cluster has OIDC/IRSA set up for ALB controller and other IAM needs. This manifest set uses only core Kubernetes APIs and no CRDs.
+    - Adjustments required post-deploy: replace example.com with real DNS name; verify ALB ingress controller is installed and has permissions. Update annotations to match the installed controller version if necessary.

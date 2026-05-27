@@ -1,0 +1,55 @@
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 1,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Use a dedicated non-default namespace named 'sme-app'. Baseline cluster design is a managed EKS cluster with a managed node group, OIDC enabled, and IRSA for AWS-integrated controllers.",
+    "Always install the mandatory EKS managed add-ons vpc-cni, kube-proxy, and coredns; vpc-cni must be created before compute (before_compute=true) and all add-ons should reach healthy state before workload validation.",
+    "Ingress is required for baseline validation because no Ingress exists in the manifests. Plan an internet-facing AWS ALB via the AWS Load Balancer Controller and route it only to the frontend service. Keep the api service internal. HTTP-only is sufficient for the baseline because no TLS or ACM certificate requirement is expressed in the inputs.",
+    "The AWS Load Balancer Controller is required by the planned ALB Ingress and should use least-privilege AWS access through IRSA. Public subnets must be ALB-eligible and tagged for Kubernetes discovery; worker nodes should run in private subnets.",
+    "Network baseline: 2 public and 2 private subnets across at least 2 AZs. A NAT gateway is required because nodes are placed in private subnets and still need outbound access for image pulls and AWS API access.",
+    "No persistence is indicated. There are no Docker Compose volumes, bind mounts, ConfigMap-like file mounts, or PVCs in the generated manifests. All workloads should remain stateless Deployments. Do not add EBS CSI because no PVC-backed storage is required.",
+    "Config/source classification: the only explicit runtime configuration is QUOTES_API, which is plain non-secret environment configuration. No secrets are inferable from the Compose file or the Kompose output.",
+    "Compose dependency intent is api -> quotes and frontend -> api, but Kubernetes does not honor Docker Compose depends_on ordering/readiness semantics. No extra startup orchestration is included in the infrastructure baseline.",
+    "Critical Compose/K8s discrepancy: Compose intent implies the quotes service should be reachable at http://quotes:5000 because api sets QUOTES_API=http://quotes:5000. Kompose did not generate a Service for quotes because no ports were declared, and the quotes Deployment also has no declared containerPort. As currently realized by the generated manifests, the DNS name 'quotes' will not exist and api-to-quotes traffic will fail until the application manifests are corrected.",
+    "Port realization discrepancy handling: Compose exposed api as 3000:3000 and frontend as 8080:80. The generated Kubernetes Services are ClusterIP api:3000->3000 and frontend:8080->80. The planned public ALB entrypoint should therefore target the frontend Service on port 8080.",
+    "Node sizing math for t3.small uses 1.4 GiB allocatable per node, not 2 GiB. Estimated minimum app memory requests: frontend 128 Mi, api 256 Mi, quotes 256 Mi. Estimated baseline system/controller memory on a 1-node cluster: coredns 2x70 Mi = 140 Mi, kube-proxy 50 Mi, vpc-cni 100 Mi, AWS Load Balancer Controller 128 Mi. Total estimated pod memory is about 1058 Mi, which is below 1.4 GiB allocatable (~1433 Mi). Estimated pod count is 8 total (3 app pods + 2 coredns + 1 kube-proxy + 1 vpc-cni + 1 ALB controller), which is within the typical t3.small per-node pod limit, so desired_node_count=1 is sufficient for a minimal working baseline.",
+    "No trigger-based add-ons beyond the AWS Load Balancer Controller are required. Do not add metrics-server, ExternalDNS, cert-manager, autoscalers, service mesh, observability stacks, or policy engines because the inputs do not require them.",
+    "Kompose warnings to retain in plan notes: the Compose 'version' field is obsolete, and the key functional warning is 'Service \"quotes\" won't be created because ports is not specified'."
+  ]
+}

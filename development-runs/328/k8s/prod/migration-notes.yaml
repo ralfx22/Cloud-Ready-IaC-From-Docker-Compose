@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    - Namespace: a dedicated non-default namespace 'sme-app' will be used for all application resources.
+    - Ingress/External access: An AWS ALB Ingress is added to expose the frontend service for validation. This requires the AWS Load Balancer Controller to be installed; otherwise the Ingress will not create an ALB.
+    - Service discovery: The original docker-compose set QUOTES_API=http://quotes:5000. Kompose did not create a Service for 'quotes' because no ports were defined. A ClusterIP Service 'quotes' exposing port 5000 was added so api can reach quotes at http://quotes:5000.
+    - Service types: All services are ClusterIP per plan. frontend is exposed via ALB Ingress; api and quotes remain internal.
+    - Port mappings: frontend service maps port 8080 -> containerPort 80; api maps 3000 -> 3000; quotes maps 5000 -> 5000.
+    - Probes: No liveness/readiness/startup probes were added. Probes were omitted because none were explicitly evidenced in the source manifests. Add probes later when exact probe commands/paths/ports are known.
+    - Storage: No PersistentVolumeClaims were present in the original manifests, and none were added.
+    - Kompose warnings observed:
+      * 'version is obsolete' for the docker-compose file
+      * 'Service "quotes" won't be created because 'ports' is not specified'
+    - Required cluster add-ons (not created here): AWS Load Balancer Controller (for ALB Ingress), IRSA and IAM policies for the controller, and standard EKS add-ons (vpc-cni, kube-proxy, coredns). TLS/certificate management not addressed.

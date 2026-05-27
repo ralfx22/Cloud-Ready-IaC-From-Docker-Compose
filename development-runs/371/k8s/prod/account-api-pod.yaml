@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: account-api
+  namespace: microservices
+  labels:
+    io.kompose.service: account-api
+spec:
+  containers:
+    - env:
+        - name: spring.cloud.config.uri
+          value: http://config-server:8888/config-server
+        - name: spring.profiles.active
+          value: docker
+      image: 0145136798/account-api
+      name: account-api
+  restartPolicy: OnFailure

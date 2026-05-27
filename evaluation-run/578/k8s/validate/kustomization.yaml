@@ -1,0 +1,13 @@
+namespace: ns-578
+resources:
+  - resources/01-namespace.yaml
+  - resources/02-configmaps.yaml
+  - resources/03-pvcs.yaml
+  - resources/04-db.yaml
+  - resources/05-cache.yaml
+  - resources/06-web.yaml
+  - resources/07-nginx.yaml
+  - resources/08-celery-worker.yaml
+  - resources/09-celery-beat.yaml
+  - resources/10-ingress.yaml
+  - resources/11-migration-notes.yaml

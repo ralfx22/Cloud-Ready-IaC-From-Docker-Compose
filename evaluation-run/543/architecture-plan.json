@@ -1,0 +1,62 @@
+```json
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Stateless application: no volumes, PVCs, ConfigMaps, or Secrets required. All three services are stateless Deployments.",
+    "Kompose did NOT create a Service for 'quotes' because no 'ports' key was specified in Compose. However, the api service references QUOTES_API=http://quotes:5000, so a ClusterIP Service for quotes on port 5000 must be created manually.",
+    "Frontend container listens on port 80 (Nginx). The K8s Service maps port 8080 → targetPort 80 as Kompose derived from the Compose host:container mapping. The ALB Ingress will route to the frontend Service on port 8080.",
+    "HTTP-only is sufficient for baseline validation; no TLS/ACM certificate is planned since none was specified.",
+    "QUOTES_API env var value 'http://quotes:5000' is valid in Kubernetes when all resources are in the same namespace; DNS resolves via <service>.<namespace>.svc.cluster.local.",
+    "Public subnets tagged with 'kubernetes.io/role/elb=1' for internet-facing ALB placement; private subnets tagged with 'kubernetes.io/role/internal-elb=1'.",
+    "AWS Load Balancer Controller requires an IAM role via IRSA (OIDC) with least-privilege policy to create/manage ALB resources from Kubernetes Ingress objects.",
+    "EKS managed add-ons: vpc-cni (before_compute=true), kube-proxy, coredns. No EBS CSI driver needed (no PVCs). No metrics-server needed (no HPA).",
+    "Memory estimates per pod: quotes ~512 Mi (custom microservice, no clear signal, using default), api ~512 Mi (custom microservice, no clear signal, using default), frontend ~128 Mi (Nginx serving static files on port 80). Total application memory: ~1152 Mi.",
+    "System pod overhead: coredns 2 replicas × 170 Mi = 340 Mi, AWS LB Controller 2 replicas × ~128 Mi = 256 Mi. Total cluster workload ~1748 Mi. Two t3.small nodes provide 2 × 1434 Mi = 2868 Mi allocatable, which exceeds total demand.",
+    "Kompose warning: 'version' is obsolete — informational only, no impact.",
+    "NAT gateway is required so nodes in private subnets can pull container images and communicate with AWS APIs."
+  ]
+}
+```

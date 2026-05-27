@@ -1,0 +1,1 @@
+[31mFATA[0m Unable to load files: env file /data/shared/574/config/prod.env not found: stat /data/shared/574/config/prod.env: no such file or directory 

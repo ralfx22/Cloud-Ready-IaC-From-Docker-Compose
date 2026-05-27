@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: rrb-microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.0.1
+          ports:
+            - containerPort: 3000
+          env:
+            - name: gf_security_admin_password
+              value: password
+            - name: gf_security_admin_user
+              value: admin
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+              subPath: grafana
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: rrb-microservices
+spec:
+  type: ClusterIP
+  ports:
+    - name: "3000"
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: grafana

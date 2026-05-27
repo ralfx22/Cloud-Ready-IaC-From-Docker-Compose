@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: wger
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: wger
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: wger
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: wger
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/part-of: wger
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/part-of: wger
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: cache
+    app.kubernetes.io/part-of: wger
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cache
+    app.kubernetes.io/part-of: wger
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-headless
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/part-of: wger
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/part-of: wger
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-headless
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: cache
+    app.kubernetes.io/part-of: wger
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: cache
+    app.kubernetes.io/part-of: wger
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: app
+  labels:
+    app: api
+    io.kompose.service: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        io.kompose.service: api
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/sme-api:latest
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: QUOTES_API
+              value: "http://quotes:5000"

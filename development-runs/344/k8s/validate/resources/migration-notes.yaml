@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  kompose-warnings: |
+    WARN: `version` is obsolete in the source docker-compose file.
+    WARN: Service "quotes" wasn't created by kompose because no ports were declared; kompose produced only a Deployment for quotes.
+  assumptions_and_actions: |
+    - Created dedicated namespace 'sme-app' and placed all resources there.
+    - Restored an internal ClusterIP Service for 'quotes' on port 5000 to satisfy internal dependency referenced by QUOTES_API.
+    - Kept api and frontend as ClusterIP services (frontend exposed via ALB/Ingress).
+    - Frontend Ingress is configured for AWS Load Balancer Controller (ingressClassName: alb) and is HTTP-only for baseline smoke tests.
+    - Probes were omitted because no explicit probe paths/ports/exec were specified in the source manifests.
+    - Replicas left at 1 as produced by kompose; adjust for production/resilience as needed.
+    - No PVCs or persistent volumes were created because none were present in the compose manifests.
+    - If the quotes container listens on a different port than 5000, update the quotes Service and Deployment accordingly.
+    - AWS-specific prerequisites (OIDC provider, IRSA for the ALB controller, public subnet tagging) are required for the ALB to be provisioned; those are outside these Kubernetes manifests.

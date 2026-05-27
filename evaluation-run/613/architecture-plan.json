@@ -1,0 +1,146 @@
+
+
+```json
+{
+  "k8s": {
+    "namespace": "bookstore",
+    "services": [
+      {
+        "name": "bookstore-mysql-db",
+        "type": "Deployment",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-consul-discovery",
+        "type": "Deployment",
+        "port": 8500,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-zuul-api-gateway-server",
+        "type": "Deployment",
+        "port": 8765,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-account-service",
+        "type": "Deployment",
+        "port": 4001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-billing-service",
+        "type": "Deployment",
+        "port": 5001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-catalog-service",
+        "type": "Deployment",
+        "port": 6001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-order-service",
+        "type": "Deployment",
+        "port": 7001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-payment-service",
+        "type": "Deployment",
+        "port": 8001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-frontend",
+        "type": "Deployment",
+        "port": 80,
+        "exposed": true
+      },
+      {
+        "name": "bookstore-zipkin",
+        "type": "Deployment",
+        "port": 9411,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-prometheus",
+        "type": "Deployment",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-grafana",
+        "type": "Deployment",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-telegraf",
+        "type": "Deployment",
+        "port": 8125,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-influxdb",
+        "type": "Deployment",
+        "port": 8086,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-chronograf",
+        "type": "Deployment",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-kapacitor",
+        "type": "Deployment",
+        "port": 9092,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 7,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.3.0/24", "10.0.4.0/24"],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Memory estimates per service: bookstore-mysql-db 512Mi, bookstore-consul-discovery 256Mi, bookstore-zuul-api-gateway-server 640Mi (JVM -Xmx512m + overhead), bookstore-account-service 640Mi, bookstore-billing-service 640Mi, bookstore-catalog-service 640Mi, bookstore-order-service 640Mi, bookstore-payment-service 640Mi, bookstore-frontend 128Mi (nginx/static), bookstore-zipkin 512Mi (Java), bookstore-prometheus 256Mi, bookstore-grafana 256Mi, bookstore-telegraf 128Mi, bookstore-influxdb 512Mi, bookstore-chronograf 128Mi, bookstore-kapacitor 256Mi.",
+    "Total estimated pod memory: ~6,784 Mi across 16 pods. At 1.4 GiB (~1,434 Mi) allocatable per t3.small node, 7 nodes provide ~10,038 Mi allocatable which exceeds total pod requests and allows scheduling headroom. Max ~17 pods per t3.small node so pod count (16) is not the bottleneck.",
+    "Six Java/Spring Boot services have JAVA_TOOL_OPTIONS=-Xmx512m. Estimated 640Mi each (512Mi heap + ~128Mi non-heap/container overhead).",
+    "PVCs required for 4 stateful services: bookstore-mysql-db (/var/lib/mysql), bookstore-grafana (/var/lib/grafana), bookstore-influxdb (/var/lib/influxdb), bookstore-chronograf (/var/lib/chronograf). All are persistent runtime data directories — PVCs are appropriate. EBS CSI driver add-on is required.",
+    "A default gp3 StorageClass will be created to back PVCs since EBS CSI driver does not create one automatically and the Kompose PVCs have no storageClassName set.",
+    "Telegraf bind-mount of /var/run/docker.sock was skipped by Kompose (host Docker socket unavailable in K8s). Telegraf may need reconfiguration for container-level metrics in K8s; noted as a gap.",
+    "Compose declared booksture-telegraph-volume (typo) but it is unused by any mount. The telegraf service only had the docker.sock bind mount. No PVC needed for telegraf.",
+    "bookstore-frontend BACKEND_API_GATEWAY_URL defaults to http://localhost:8765 in Compose. Must be updated to the in-cluster service URL (http://bookstore-zuul-api-gateway-server:8765) or the external ALB URL for the gateway depending on where the API call originates (browser vs server-side). Since this is likely a React SPA making browser-side calls, the env var should point to the external ingress path for the API gateway or both frontend and gateway should be behind the ALB. For baseline, expose frontend via ALB Ingress on port 80.",
+    "Ingress plan: AWS ALB Ingress Controller will create an internet-facing ALB routing to bookstore-frontend on port 80. HTTP-only is sufficient for baseline validation; no ACM certificate planned. Public subnets will carry the 'kubernetes.io/role/elb=1' tag for ALB subnet auto-discovery.",
+    "MySQL credentials (MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD) are passed as plain env vars in Kompose output. They should be migrated to a Kubernetes Secret and referenced via secretKeyRef. Noted for implementation.",
+    "Kompose generated duplicate port entries for bookstore-mysql-db Service (ports + expose both map to 3306). The duplicate should be deduplicated in final manifests.",
+    "Kompose warning: 'version' key is obsolete — no action needed. Volume directory existence warnings are expected since Kompose runs outside the container context.",
+    "Discrepancy: Compose maps frontend host port 3000 to container port 80. Kompose Service correctly uses port 3000 / targetPort 80. The ALB Ingress will target the Service on port 3000, which forwards to container port 80.",
+    "EKS managed add-ons planned: vpc-cni (before_compute=true), kube-proxy, coredns. Trigger-based add-ons: aws-ebs-csi-driver (PVCs present), AWS Load Balancer Controller (Ingress/ALB). OIDC/IRSA for EBS CSI driver and LB controller IAM roles.",
+    "All services are internal ClusterIP except bookstore-frontend which gets an ALB Ingress for external access.",
+    "Nodes will run in private subnets; NAT gateway required for pulling container images and EKS API communication."
+  ]
+}
+```

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-management-api-mysql
+  template:
+    metadata:
+      labels:
+        app: asset-management-api-mysql
+    spec:
+      containers:
+        - name: asset-management-api-mysql
+          image: mysql:8.0.33
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: mysql
+            - name: MYSQL_PASSWORD
+              value: pwd
+            - name: MYSQL_ROOT_PASSWORD
+              value: pwd
+            - name: MYSQL_USER
+              value: admin
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+              subPath: mysql
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: asset-management-api-mysql-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-management-api-mysql
+  namespace: rrb-microservices
+spec:
+  type: ClusterIP
+  ports:
+    - name: "3306"
+      port: 3306
+      targetPort: 3306
+  selector:
+    app: asset-management-api-mysql

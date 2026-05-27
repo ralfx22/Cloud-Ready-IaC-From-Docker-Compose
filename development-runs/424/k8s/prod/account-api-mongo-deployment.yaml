@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: account-api-mongo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: account-api-mongo
+    spec:
+      containers:
+        - name: account-api-mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+              name: mongo
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: account-api-mongo-claim0

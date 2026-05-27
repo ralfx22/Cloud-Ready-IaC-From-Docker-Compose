@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: microservices
+  labels:
+    io.kompose.service: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: config-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: config-server
+    spec:
+      containers:
+        - env:
+            - name: spring.profiles.active
+              value: docker
+          image: 0145136798/config-server
+          name: config-server
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /app/resources/config-files
+              name: config-server-claim0
+      restartPolicy: Always
+      volumes:
+        - name: config-server-claim0
+          persistentVolumeClaim:
+            claimName: config-server-claim0

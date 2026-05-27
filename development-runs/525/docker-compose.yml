@@ -1,0 +1,18 @@
+version: '2'
+services:
+  quotes:
+    image: ralfx22/sme-quotes:v2
+  api:
+    image: ralfx22/sme-api:v2
+    environment:
+      - "QUOTES_API=http://quotes:5000"
+    depends_on:
+      - quotes
+    ports:
+      - "3000:3000"
+  frontend:
+    image: ralfx22/sme-frontend:v2
+    depends_on:
+      - api
+    ports:
+      - "8080:80"

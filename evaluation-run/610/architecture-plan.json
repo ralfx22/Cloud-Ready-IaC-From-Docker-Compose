@@ -1,0 +1,138 @@
+{
+  "k8s": {
+    "namespace": "bookstore",
+    "services": [
+      {
+        "name": "bookstore-account-service",
+        "type": "ClusterIP",
+        "port": 4001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-billing-service",
+        "type": "ClusterIP",
+        "port": 5001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-catalog-service",
+        "type": "ClusterIP",
+        "port": 6001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-chronograf",
+        "type": "ClusterIP",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-consul-discovery",
+        "type": "ClusterIP",
+        "port": 8500,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-frontend",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-grafana",
+        "type": "ClusterIP",
+        "port": 3030,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-influxdb",
+        "type": "ClusterIP",
+        "port": 8086,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-kapacitor",
+        "type": "ClusterIP",
+        "port": 9092,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-mysql-db",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-order-service",
+        "type": "ClusterIP",
+        "port": 7001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-payment-service",
+        "type": "ClusterIP",
+        "port": 8001,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-prometheus",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-telegraf",
+        "type": "ClusterIP",
+        "port": 8125,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-zipkin",
+        "type": "ClusterIP",
+        "port": 9411,
+        "exposed": false
+      },
+      {
+        "name": "bookstore-zuul-api-gateway-server",
+        "type": "ClusterIP",
+        "port": 8765,
+        "exposed": true
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 6,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline plan: dedicated namespace 'bookstore' on a managed EKS cluster with a managed node group, IAM OIDC provider, and IRSA. Mandatory EKS managed add-ons are required: vpc-cni, kube-proxy, and coredns, with vpc-cni installed before node group creation. Because PVCs exist in the manifests, also provision the EBS CSI driver via IRSA and ensure a default StorageClass exists (for example gp3), otherwise the generated PVCs will remain Pending.",
+    "Ingress is not present in the generated manifests, so add one minimal public ALB-backed Ingress for end-to-end validation. The safest primary entrypoint is bookstore-zuul-api-gateway-server on port 8765. Keep all other services internal. TLS is not explicitly required by Compose or manifests, so HTTP-only is sufficient for the baseline; no ACM certificate is planned.",
+    "Memory estimates used for node sizing from the Compose services: bookstore-mysql-db 512Mi; bookstore-consul-discovery 256Mi; bookstore-zuul-api-gateway-server 512Mi; bookstore-account-service 512Mi; bookstore-billing-service 512Mi; bookstore-catalog-service 512Mi; bookstore-order-service 512Mi; bookstore-payment-service 512Mi; bookstore-frontend 256Mi; bookstore-zipkin 512Mi; bookstore-prometheus 512Mi; bookstore-grafana 256Mi; bookstore-telegraf 128Mi; bookstore-influxdb 512Mi; bookstore-chronograf 256Mi; bookstore-kapacitor 256Mi. Total estimated app memory = 6528Mi.",
+    "Node sizing math: t3.small provides only 1.4Gi allocatable per node. App pods alone need about 6.375Gi. Adding baseline/control pods for coredns, aws-node, kube-proxy, EBS CSI, and AWS Load Balancer Controller pushes total expected requested memory beyond what 5 nodes can safely provide, so desired_node_count is set to 6. Pod-density is also acceptable at this size: 16 application pods plus system/controller pods remain below the approximate 11-pod-per-node ceiling.",
+    "Persistence intent confirmed by both Compose and generated manifests: MySQL uses persistent runtime data at /var/lib/mysql, Grafana at /var/lib/grafana, InfluxDB at /var/lib/influxdb, and Chronograf at /var/lib/chronograf. These are data-like mounts and should remain PVC-backed. No PVC should be used for environment variables or other config-like inputs. The current generated manifests realize these stateful workloads as Deployments with Recreate strategy; the infrastructure baseline supports them as applied, even though StatefulSet would normally be more idiomatic for stateful services.",
+    "Config/secret classification: service environment variables are config-like; MySQL credentials are secrets-like but are currently embedded as plain environment variables in both Compose and generated Kubernetes manifests. For a working baseline, no extra secrets-management add-on is planned, but these values should be moved into Kubernetes Secrets in the workload layer rather than left inline.",
+    "Compose-to-Kubernetes discrepancy: the frontend intended BACKEND_API_GATEWAY_URL defaulted to http://localhost:8765 and Kompose preserved that into the Deployment. That value is not Kubernetes-safe for pod-to-service or browser-to-backend communication and should be replaced with either the internal service DNS for the API gateway or the external ALB URL/path once manifests are corrected. By contrast, ZIPKIN_HOST=bookstore-zipkin:9411 is Kubernetes-safe within the same namespace.",
+    "Compose-to-Kubernetes discrepancy: Compose published many ports, but Kompose generated only ClusterIP Services and no externally reachable Service or Ingress. Public exposure therefore does not exist in the current Kubernetes realization; the plan adds only one ALB ingress-backed entrypoint for validation and leaves all other services internal.",
+    "Compose-to-Kubernetes discrepancy: bookstore-mysql-db ended up with duplicate port entries for 3306 in the generated Service because both ports and expose were present in Compose. Kubernetes will still treat this as a single internal MySQL endpoint conceptually for planning purposes.",
+    "Compose-to-Kubernetes discrepancy: bookstore-telegraf mounted /var/run/docker.sock in Compose, but Kompose skipped that host-path mount. This host-Docker-socket pattern should not be carried into EKS as a baseline; telegraf may therefore lose Docker-socket-based metrics functionality unless the application is redesigned for Kubernetes-native metrics collection.",
+    "Kompose warnings to record: the Compose version field is marked obsolete; warnings about failing to inspect /var/lib/chronograf, /var/lib/grafana, /var/lib/influxdb, and /var/lib/mysql reflect conversion-time host-path checks and do not change the runtime decision to use PVC-backed persistent data in Kubernetes. Typoed names from source intent were preserved in generated objects (for example booksture-chronograf-volume, booksture-influxdb-volume, bookstore-graphana-volume), so manifests and storage resources must stay name-consistent if applied as generated.",
+    "Network baseline: create a VPC with 2 public and 2 private subnets across 2 AZs. Private subnets host worker nodes; public subnets are tagged for ALB discovery. A NAT gateway is required so private nodes can pull images and reach AWS APIs. The AWS Load Balancer Controller will require IRSA permissions and subnet discovery tags to create the public ALB."
+  ]
+}

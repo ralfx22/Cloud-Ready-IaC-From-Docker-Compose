@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: app
+  labels:
+    "io.kompose.service": frontend
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      "io.kompose.service": frontend
+  template:
+    metadata:
+      labels:
+        "io.kompose.service": frontend
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ralfx22/sme-frontend:latest
+          ports:
+            - containerPort: 80
+              protocol: TCP

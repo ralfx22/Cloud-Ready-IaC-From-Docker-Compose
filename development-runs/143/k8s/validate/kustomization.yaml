@@ -1,0 +1,5 @@
+namespace: ns-143
+resources:
+  - resources/10-deployments.yaml
+  - resources/20-services.yaml
+  - resources/30-ingress.yaml

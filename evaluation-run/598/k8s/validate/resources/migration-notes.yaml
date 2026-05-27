@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservice-demo
+data:
+  notes: |
+    Migration Notes - Docker Compose to Kubernetes (EKS)
+    ====================================================
+
+    1. WORKLOAD CONVERSION:
+       - All bare Pods from Kompose output converted to Deployments (user, project, task, api, api-gateway)
+         and StatefulSets (postgresql, mysql, mongo) per architecture plan.
+
+    2. BUILD DIRECTIVES:
+       - Docker Compose 'build' directives for user (./userService), project (./projectService),
+         task (./taskService), api (./apiService) are not supported in Kubernetes.
+       - Pre-built images are used: ralfx22/md-user, ralfx22/md-project, ralfx22/md-task, ralfx22/md-api.
+       - Images must be pushed to a container registry accessible from EKS nodes.
+
+    3. IMAGE PULL POLICY:
+       - api-gateway had pull_policy: never in Compose (Docker-local only).
+         Changed to imagePullPolicy: IfNotPresent for Kubernetes.
+
+    4. POSTGRESQL FIXES:
+       - Kompose liveness probe had entire command as single string: 'pg_isready -U postgres -d microservice-task'.
+         Split into proper exec command array: ['pg_isready', '-U', 'postgres', '-d', 'microservice-task'].
+       - Added PGDATA env var set to /var/lib/postgresql/data/pgdata to use a subdirectory,
+         avoiding initdb errors when PVC mount root contains lost+found directory.
+       - Added fsGroup: 999 to pod securityContext for volume ownership.
+
+    5. MYSQL FIXES:
+       - Added fsGroup: 999 to pod securityContext for volume ownership.
+       - mysql:5.7 image requires linux/amd64 platform. EKS nodes must be amd64-based.
+
+    6. MONGO FIXES:
+       - Added fsGroup: 999 to pod securityContext for volume ownership.
+       - Two PVCs maintained: mongodb (/data/db) and mongodb-config (/data/configdb).
+
+    7. SERVICE PORT CORRECTIONS:
+       - Kompose used host-mapped ports (8080, 8081, 8082, 8083) as service ports.
+         Corrected to use actual container ports: user:50051, project:50052, task:50053, api:50059.
+         Inter-service env vars reference these ports directly.
+
+    8. SECRETS:
+       - Database credentials (POSTGRES_PASSWORD, MYSQL_ROOT_PASSWORD) and connection URIs
+         containing passwords moved to Kubernetes Secrets.
+       - Passwords are currently plaintext placeholder values ('password'). Must be changed
+         before production use. Consider AWS Secrets Manager with ExternalSecrets operator.
+
+    9. STORAGE:
+       - Standalone PVCs replaced with volumeClaimTemplates in StatefulSets.
+       - No storageClassName specified; relies on cluster default StorageClass.
+       - EBS CSI driver add-on must be installed on EKS for PVC binding.
+       - Kompose warnings about non-existent volume directories are expected (named Docker volumes).
+
+    10. PROBES:
+        - Database liveness/readiness probes retained as they have exact exec commands from Compose healthchecks.
+        - Application services (user, project, task, api, api-gateway) have no probes as none were
+          defined in Compose and no exact port+path evidence exists.
+
+    11. INGRESS:
+        - ALB Ingress created for api-gateway on port 9090 (HTTP only, no TLS).
+        - AWS Load Balancer Controller must be installed on the cluster.
+        - Public subnets must be tagged with kubernetes.io/role/elb=1 for ALB subnet discovery.
+
+    12. DEPENDS_ON:
+        - Docker Compose depends_on ordering is not directly supported in Kubernetes.
+        - Services should handle connection retries and readiness gracefully.
+        - Consider init containers if strict startup ordering is required.
+
+    13. PLATFORM:
+        - project service specified platform: linux/amd64. Ensure EKS nodes use amd64 architecture.
+
+    14. RESTART POLICY:
+        - Compose restart policies (no, on-failure) converted to Kubernetes Deployment default (Always).
+        - StatefulSets also use Always restart policy (Kubernetes default for pods in controllers).
+
+    15. NAMESPACE:
+        - All resources deployed to 'microservice-demo' namespace.

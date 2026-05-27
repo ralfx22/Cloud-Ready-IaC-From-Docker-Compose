@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+  labels:
+    app: migration-notes
+data:
+  notes: |-
+    - Namespace: created dedicated namespace 'sme-app' per plan.
+    - Ingress: created an ALB Ingress resource (ingressClassName: "alb") routing host 'example.com' -> frontend service (port 8080 -> target port 80). The AWS Load Balancer Controller must be installed with IRSA before this Ingress becomes functional.
+    - Services: kept ClusterIP services for api and frontend per plan. Added a ClusterIP service for 'quotes' on port 5000 to satisfy the api environment variable (QUOTES_API=http://quotes:5000) and enable cluster DNS resolution.
+    - Quotes deployment: Kompose omitted a containerPort; added containerPort: 5000 based on Compose intent and architecture plan notes so the Service has a targetPort.
+    - Probes: readiness/liveness probes were omitted intentionally (none were evidenced in source manifests). No probes were added.
+    - Storage: no volumes or PVCs were present in the Kompose output; none were created.
+    - Secrets: no secrets detected in Compose; none were added. Add kubernetes Secrets for private registry or sensitive env vars if needed.
+    - Notes from Kompose stderr: 'version is obsolete' and 'Service "quotes" won't be created because ports is not specified'. We resolved the missing quotes Service by creating one on port 5000.
+    - Requirements before apply for full functionality: ensure EKS cluster has AWS Load Balancer Controller (and required IAM/OIDC setup), nodes have outbound access to pull container images, and the 'sme-app' namespace exists (created by this manifest set). 

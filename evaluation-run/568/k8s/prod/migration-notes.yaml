@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-microservices
+data:
+  notes.txt: |
+    - Converted raw Pods to Deployments (account-api, api-gateway, asset-management-api, discovery-server, notification-api, transaction-api) to ensure reliability.
+    - Fixed Kafka KRaft configuration to work correctly in Kubernetes (updated KAFKA_ADVERTISED_LISTENERS, KAFKA_LISTENERS, and KAFKA_CONTROLLER_QUORUM_VOTERS to use standard 0.0.0.0/localhost for internal communication).
+    - Migrated config-server and prometheus configurations from PVCs to ConfigMaps, as they represent configuration, not runtime data.
+    - Fixed volume mount paths for databases (Mongo: /data/db, MySQL: /var/lib/mysql, Postgres: /var/lib/postgresql/data) to their standard container expected paths instead of original compose mounts.
+    - Used volume subPaths for database data mounts to prevent 'lost+found' issues natively found on newly provisioned EBS root volumes.
+    - Increased database PVC sizes to 1Gi as 100Mi is generally too small for stable database execution.
+    - Added securityContext.fsGroup to Grafana's Pod spec to ensure the persistent volume is writable by its non-root user.
+    - Omitted Services for account-api, asset-management-api, notification-api, and transaction-api, as they don't declare ports and only consume/subscribe internally.
+    - Created ALB Ingress for api-gateway, properly configured with ALB healthcheck annotations.

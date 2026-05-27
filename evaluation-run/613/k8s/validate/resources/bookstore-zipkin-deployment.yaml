@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-zipkin
+  namespace: bookstore
+  labels:
+    app: bookstore-zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-zipkin
+  template:
+    metadata:
+      labels:
+        app: bookstore-zipkin
+    spec:
+      containers:
+        - name: bookstore-zipkin
+          image: openzipkin/zipkin
+          ports:
+            - containerPort: 9411
+              protocol: TCP
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "512Mi"
+      restartPolicy: Always

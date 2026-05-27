@@ -1,0 +1,89 @@
+{
+  "k8s": {
+    "namespace": "microservice-demo",
+    "services": [
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 8083,
+        "exposed": false
+      },
+      {
+        "name": "user",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": false
+      },
+      {
+        "name": "project",
+        "type": "ClusterIP",
+        "port": 8081,
+        "exposed": false
+      },
+      {
+        "name": "task",
+        "type": "ClusterIP",
+        "port": 8082,
+        "exposed": false
+      },
+      {
+        "name": "mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      },
+      {
+        "name": "mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "postgresql",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 3,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline AWS plan: VPC across 2 AZs, public subnets for internet-facing ALB, private subnets for worker nodes, managed EKS cluster, one managed node group, and cluster OIDC provider with IRSA enabled. Private nodes imply NAT is required for image pulls and outbound access.",
+    "Mandatory EKS managed add-ons: vpc-cni, kube-proxy, and coredns. vpc-cni must be installed before compute. Because PVCs are present in the manifests, add the Amazon EBS CSI driver and use IRSA for it.",
+    "A default StorageClass is required because all Kompose-generated PVCs omit storageClassName; without a default EBS-backed StorageClass, mongodb, mongodb-config, mysqldb, and postgresdb PVCs will remain Pending.",
+    "External validation path: create a minimal Kubernetes Ingress for api-gateway on service port 9090 and provision it through AWS Load Balancer Controller with IRSA. Public ALB is required; subnet discovery tags must be present. HTTP-only is sufficient for baseline validation because no explicit TLS/certificate requirement is present.",
+    "Current Kompose realization is not a stable baseline for EKS operations because it generated standalone Pods with restartPolicy Never/OnFailure instead of controllers. Plan to run stateless services (user, project, task, api, api-gateway) as Deployments with 1 replica each, and databases (mongo, mysql, postgresql) as StatefulSets with PVC-backed storage.",
+    "Compose-to-Kubernetes port discrepancy: Compose intent used container-to-container addresses on ports 50051, 50052, 50053, and 50059, but the generated Kubernetes Services expose user=8080, project=8081, task=8082, api=8083. Prefer Kubernetes-applied service ports for the working plan and record that environment variables referencing user:50051, project:50052, task:50053, and api:50059 must be corrected or the Services changed accordingly; as generated, inter-service communication would fail.",
+    "Service exposure plan uses only api-gateway as the public entrypoint. All database and internal microservices remain internal ClusterIP services. This is the minimal exposure needed for end-to-end smoke testing.",
+    "Persistence classification from Compose and manifests: postgresdb -> persistent data at /var/lib/postgresql/data; mysqldb -> persistent data at /var/lib/mysql; mongodb -> persistent data at /data/db; mongodb_config -> persistent runtime data at /data/configdb. These are data volumes, not config volumes, so PVCs are appropriate. No host-path semantics are preserved.",
+    "Config/secret handling intent: database names and internal service addresses are non-sensitive config; database passwords and full DB_URI values contain credentials and should be modeled as Kubernetes Secrets rather than plain env values in the final baseline.",
+    "Node sizing math using 1.4 GiB allocatable per t3.small node: estimated minimum memory per service = user 256Mi, project 256Mi, task 256Mi, api 256Mi, api-gateway 256Mi, mongo 512Mi, mysql 512Mi, postgresql 512Mi; total app memory estimate = 2816Mi. Three nodes provide about 4300Mi allocatable, which exceeds the application estimate and leaves room for required system pods and controllers. Pod count is also comfortably within typical per-node limits.",
+    "Kompose warnings to record: Compose version field marked obsolete; volume path inspection warnings for /data/db, /data/configdb, /var/lib/mysql, and /var/lib/postgresql/data; healthchecks became liveness probes; depends_on ordering/health semantics are not enforced by Kubernetes and should not be relied on for startup sequencing."
+  ]
+}

@@ -1,0 +1,57 @@
+```json
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Memory estimation: quotes (512 Mi), api (512 Mi), frontend (512 Mi) = Total 1536 Mi. A single t3.small provides ~1.4 GiB (1433 Mi) allocatable memory, which is insufficient for all pods. Planning 2x t3.small nodes to provide ~2.8 GiB of total allocatable capacity.",
+    "DISCREPANCY/KOMPOSE WARNING: Kompose omitted the 'quotes' service entirely because 'ports' were not defined in docker-compose.yml. However, the 'api' deployment explicitly depends on 'http://quotes:5000'. A ClusterIP Service mapping port 5000 to the 'quotes' deployment must be manually created.",
+    "The frontend service targets port 80 on the container and is exposed internally on 8080. It will be the single external entrypoint, exposed via an AWS ALB Ingress Controller using public subnets.",
+    "HTTP-only ingress is sufficient for baseline validation. No ACM certificate or TLS is planned at this stage.",
+    "VPC design requires a NAT Gateway so EKS nodes in private subnets can pull Docker images.",
+    "Core EKS managed add-ons (vpc-cni, kube-proxy, and coredns) must be explicitly provisioned, ensuring vpc-cni is installed prior to the managed node group.",
+    "OIDC provider and IRSA will be configured to grant the AWS Load Balancer Controller the required IAM permissions."
+  ]
+}
+```

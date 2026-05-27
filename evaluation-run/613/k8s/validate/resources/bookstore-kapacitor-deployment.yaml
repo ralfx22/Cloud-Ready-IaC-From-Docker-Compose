@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-kapacitor
+  namespace: bookstore
+  labels:
+    app: bookstore-kapacitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-kapacitor
+  template:
+    metadata:
+      labels:
+        app: bookstore-kapacitor
+    spec:
+      containers:
+        - name: bookstore-kapacitor
+          image: kapacitor:1.7
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+          env:
+            - name: KAPACITOR_HOSTNAME
+              value: bookstore-kapacitor
+            - name: KAPACITOR_INFLUXDB_0_URLS_0
+              value: http://bookstore-influxdb:8086
+          resources:
+            requests:
+              memory: "256Mi"
+            limits:
+              memory: "256Mi"
+      restartPolicy: Always

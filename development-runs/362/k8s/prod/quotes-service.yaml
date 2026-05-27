@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes
+  namespace: sme-app
+  labels:
+    app: quotes
+spec:
+  type: ClusterIP
+  selector:
+    app: quotes
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+---

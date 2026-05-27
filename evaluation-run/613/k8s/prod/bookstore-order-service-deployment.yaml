@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-order-service
+  namespace: bookstore
+  labels:
+    app: bookstore-order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-order-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-order-service
+    spec:
+      containers:
+        - name: bookstore-order-service
+          image: ralfx22/bsa-order-service:latest
+          ports:
+            - containerPort: 7001
+              protocol: TCP
+          env:
+            - name: SERVER_PORT
+              value: "7001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+            - name: SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS
+              value: "true"
+          resources:
+            requests:
+              memory: "640Mi"
+            limits:
+              memory: "640Mi"
+      restartPolicy: Always

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: account-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: account-api
+    spec:
+      containers:
+        - name: account-api
+          image: ralfx22/rrb-account-api
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api-mongo
+spec:
+  serviceName: account-api-mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: account-api-mongo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: account-api-mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+              name: mongo
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-api-mongo
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: account-api-mongo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: account-api-mongo
+  ports:
+    - name: mongo
+      port: 27017
+      targetPort: 27017

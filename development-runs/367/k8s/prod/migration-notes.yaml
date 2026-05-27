@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    - Namespace 'sme-app' created for the application as per architecture plan.
+    - Kompose warnings observed:
+      * "version" is obsolete in docker-compose (kompose emitted a warning).
+      * Service 'quotes' was not created by kompose because 'ports' was not specified in the compose file; kompose created only a Deployment. We added a ClusterIP Service 'quotes' on port 5000 to satisfy the api's QUOTES_API (http://quotes:5000) and restore DNS-based internal connectivity.
+    - Probes: Omitting readiness/liveness/startup probes because no explicit probe details (exact port/path or exec) were present in the source manifests. Add probes later when exact healthcheck endpoints/commands are known.
+    - Ingress: An AWS ALB-backed Ingress (ingressClassName: alb) was added to expose the frontend service over HTTP for baseline validation. TLS is not configured (HTTP-only) per plan. The ALB annotations assume the AWS Load Balancer Controller (and required IRSA/IAM setup) will be installed separately.
+    - Services ensured to be ClusterIP and selectors/labels reconciled with Deployments (label key 'app' used alongside existing io.kompose.service label for compatibility).
+    - No Secrets or ConfigMaps with sensitive data were present in the compose file; none were added except this migration notes ConfigMap. If secrets are required, create Kubernetes Secret manifests and update Deployments accordingly.
+    - No PVCs or hostPath volumes were detected in the source; none were added.
+    - This manifest set uses only standard Kubernetes APIs (core/v1, apps/v1, networking.k8s.io/v1). No CRDs are required.

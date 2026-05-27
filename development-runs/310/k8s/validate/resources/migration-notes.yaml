@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    Migration and validation notes for SME application:
+    - Namespace created: sme-app.
+    - Kompose warnings captured: 'version is obsolete' and "Service 'quotes' won't be created because 'ports' is not specified".
+    - Reconciliations performed:
+      * Added a ClusterIP Service 'quotes' on port 5000 so the API (QUOTES_API=http://quotes:5000) can resolve and reach the quotes backend.
+      * Added containerPort 5000 to the quotes Deployment for clarity (original Kompose Deployment omitted it).
+      * Kept api and frontend as Deployments and ClusterIP Services. API service remains internal (ClusterIP) on port 3000.
+      * Frontend remains ClusterIP (port 8080 -> targetPort 80) and an Ingress (ingressClassName: alb) was added to provide an external ALB-backed entrypoint for validation.
+    - Ingress details:
+      * An ALB-style Ingress resource was added with common annotations (ingressClassName: alb, scheme: internet-facing, target-type: ip). This requires the AWS Load Balancer Controller to be installed; no CRDs are assumed here beyond standard Ingress.
+      * Host was not specified by the architecture plan; Ingress uses a path rule for '/'.
+    - Secrets/Config:
+      * No application secrets were present in the Compose file. A placeholder Secret may be provided separately if needed; no env was switched to use Secrets.
+    - Probes: No readiness/liveness probes were present in the original manifests; none were added (omitted intentionally).
+    - Storage: No PVCs or persistent volumes were present or required; none were added.
+    - Assumptions:
+      * The API expects the quotes service reachable at quotes:5000; adding the quotes Service restores intended service discovery.
+      * ALB controller (AWS Load Balancer Controller) and necessary IAM/IRSA configuration will be installed separately as part of cluster provisioning before expecting the Ingress to create an external ALB.
+    - Verification steps (suggested):
+      * Apply these manifests to the cluster: kubectl apply -f k8s/ -n sme-app
+      * Ensure pods for frontend, api, and quotes are Running.
+      * Verify api pod can resolve 'quotes' and reach http://quotes:5000.
+      * After ALB controller is installed, verify the Ingress creates an ALB and the frontend is reachable via the ALB DNS.

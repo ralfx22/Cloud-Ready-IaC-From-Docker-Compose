@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: wger
+spec:
+  type: ClusterIP
+  selector:
+    app: web
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: wger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: web
+          image: docker.io/wger/server:latest
+          envFrom:
+            - configMapRef:
+                name: wger-env
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            exec:
+              command:
+                - wget
+                - "--no-verbose"
+                - "--tries=1"
+                - "--spider"
+                - "http://localhost:8000"
+            initialDelaySeconds: 300
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - name: static
+              mountPath: /home/wger/static
+            - name: media
+              mountPath: /home/wger/media
+      volumes:
+        - name: static
+          persistentVolumeClaim:
+            claimName: static-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

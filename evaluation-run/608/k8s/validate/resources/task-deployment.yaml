@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task
+  namespace: microservice-demo
+  labels:
+    app: task
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task
+  template:
+    metadata:
+      labels:
+        app: task
+    spec:
+      containers:
+        - name: task
+          image: ralfx22/md-task
+          command:
+            - ./init
+          env:
+            - name: DB_URI
+              value: postgres://postgres:password@postgresql:5432/microservice-task
+            - name: PROJECT_ADDRESS
+              value: project:8081
+            - name: USER_ADDRESS
+              value: user:8080
+          ports:
+            - containerPort: 50053
+              protocol: TCP
+          resources:
+            requests:
+              memory: 512Mi

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: sme-app
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: sme-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/part-of: sme-app
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/sme-api:v2
+          env:
+            - name: QUOTES_API
+              value: "http://quotes:5000"
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always

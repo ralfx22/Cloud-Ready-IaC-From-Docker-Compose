@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project
+  namespace: microservices-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project
+  template:
+    metadata:
+      labels:
+        app: project
+    spec:
+      containers:
+        - name: project
+          image: ralfx22/md-project
+          ports:
+            - containerPort: 50052
+          env:
+            - name: DB_URI
+              value: mysql+mysqldb://root:password@mysql:3306/microservice-project

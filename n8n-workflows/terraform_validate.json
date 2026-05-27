@@ -1,0 +1,58 @@
+{
+  "name": "terraform_validate",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "7c43fb57-32cc-4493-940e-6731b8733004",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        3312,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=set -euo pipefail\n\nOUT=\"/data/shared/{{$execution.id}}-tf-validate\"\nCACHE=\"/data/shared/tf-cache/plugin-cache\"\nLOG=\"$OUT/terraform-log.log\"\n\nmkdir -p \"$OUT\" \"$CACHE\"\nexport TF_PLUGIN_CACHE_DIR=\"$CACHE\"\n\ncat > \"$OUT/main.tf\" <<'TF'\n{{ $json.query }}\nTF\n\ncd \"$OUT\"\n{\n  echo \"=== terraform fmt ===\"\n  terraform fmt -recursive -no-color || true\n  echo \"=== terraform init ===\"\n  terraform init -input=false -backend=false -no-color || true\n  echo \"=== terraform validate ===\"\n  terraform validate -no-color || true\n} > \"$LOG\" 2>&1\ncat \"$LOG\" >&2"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3536,
+        656
+      ],
+      "id": "965dce9b-a8ca-42dc-a049-2888a98f3b74",
+      "name": "Terraform validate",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Terraform validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e152376d-a235-4978-9ef7-d878c3a3ae64",
+  "meta": {
+    "instanceId": "47138e7237b2b47e670d7437a85d9b77cb965e57db883fdac88cf9c43b9c9dc6"
+  },
+  "id": "FVja73xh4n3l533f",
+  "tags": []
+}

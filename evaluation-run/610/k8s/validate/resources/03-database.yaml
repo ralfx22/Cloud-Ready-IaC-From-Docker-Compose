@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-mysql-db
+  namespace: bookstore
+  labels:
+    app: bookstore-mysql-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstore-mysql-db
+  template:
+    metadata:
+      labels:
+        app: bookstore-mysql-db
+    spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: init-mysql-data
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - mkdir -p /mnt/mysql && chown -R 999:999 /mnt/mysql
+          volumeMounts:
+            - name: bookstore-db-volume
+              mountPath: /mnt
+      containers:
+        - name: bookstore-mysql-db
+          image: mysql:5.7
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-mysql-db-secret
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-mysql-db-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-mysql-db-secret
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-mysql-db-secret
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+          volumeMounts:
+            - name: bookstore-db-volume
+              mountPath: /var/lib/mysql
+              subPath: mysql
+      volumes:
+        - name: bookstore-db-volume
+          persistentVolumeClaim:
+            claimName: bookstore-db-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-mysql-db
+  namespace: bookstore
+  labels:
+    app: bookstore-mysql-db
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-mysql-db
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+      protocol: TCP

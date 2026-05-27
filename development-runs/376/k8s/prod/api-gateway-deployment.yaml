@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/rrb-api-gateway
+          env:
+            - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+              value: TRACE
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP

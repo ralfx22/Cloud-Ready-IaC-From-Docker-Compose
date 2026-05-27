@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: wger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - web
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: celery-worker
+          image: docker.io/wger/server:latest
+          command: ["/start-worker"]
+          envFrom:
+            - configMapRef:
+                name: wger-env
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - "-A"
+                - wger
+                - inspect
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - name: media
+              mountPath: /home/wger/media
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

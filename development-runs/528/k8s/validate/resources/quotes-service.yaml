@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes
+  namespace: sme-app
+  labels:
+    app.kubernetes.io/name: quotes
+    app.kubernetes.io/part-of: sme-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: quotes
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      protocol: TCP

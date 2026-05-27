@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Applied target namespace rrb-app to all resources.
+    - Replaced Kompose-generated standalone Pods with Deployments for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api for restartability and declarative management.
+    - Kept only api-gateway as the public validation entrypoint and added a standard networking.k8s.io/v1 Ingress with ingressClassName alb and AWS Load Balancer Controller annotations for internet-facing HTTP on port 80 to Service api-gateway:8080.
+    - All other Services remain internal ClusterIP per architecture plan.
+    - Removed duplicate Service ports created by Kompose on several Services.
+    - Omitted all probes because no exact probe paths, ports beyond exposed ports, or exec commands were evidenced in the source inputs.
+    - Converted sensitive plain environment values into Secrets for MySQL, PostgreSQL, and Grafana admin credentials.
+    - Treated MongoDB, MySQL, and PostgreSQL as stateful and replaced Kompose Deployments plus standalone PVCs with StatefulSets using volumeClaimTemplates.
+    - Corrected database runtime data mount paths to image-conventional directories: MongoDB /data/db, MySQL /var/lib/mysql, PostgreSQL /var/lib/postgresql/data.
+    - Preserved Grafana persistence with a PVC mounted at /var/lib/grafana.
+    - Removed Kompose PVC usage for config-server because /app/resources/config-files is config-like, not runtime data. Source bind path ./config-files was reported missing, so no ConfigMap content could be created; workload now relies on image-baked configuration.
+    - Removed Kompose PVC usage for Prometheus because the source mounted file /etc/prometheus/prometheus.yml is config-like, not persistent data. Source prometheus-configuration.yml was reported missing, so no ConfigMap content could be created; workload now relies on image-baked/default configuration.
+    - Kafka configuration was rewritten for Kubernetes-safe single-pod operation: removed Docker-specific HOST listener and localhost advertised external pattern, used service DNS notification-api-kafka:9092 for client advertisement, and rewrote controller quorum traffic to pod-local 127.0.0.1:29093.
+    - account-api, asset-management-api, notification-api, and transaction-api still have no Services because no ports were evidenced in Compose or generated manifests; plan notes indicate they are internal consumers behind api-gateway.
+    - Redis, Kafka, and Zipkin remain ephemeral with no PVCs, matching source intent and architecture notes.
+    - Kompose warnings recorded: Compose version field obsolete; unsupported/missing host bind paths for account-api-mongo, asset-management-api-mysql, config-server, grafana, prometheus, and transaction-api-postgres; and missing Services for account-api, asset-management-api, notification-api, and transaction-api due to unspecified ports.

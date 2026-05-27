@@ -1,0 +1,64 @@
+{
+  "k8s": {
+    "namespace": "wger",
+    "services": [
+      {
+        "name": "nginx",
+        "type": "ClusterIP",
+        "port": 80,
+        "exposed": true
+      },
+      {
+        "name": "web",
+        "type": "ClusterIP",
+        "port": 8000,
+        "exposed": false
+      },
+      {
+        "name": "db",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "cache",
+        "type": "ClusterIP",
+        "port": 6379,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 3,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 3,
+    "private_subnets": 3,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Kompose produced no Kubernetes resources because it failed with: env file ./config/prod.env not found. The provided 'current realization' is therefore effectively empty, so this plan is based primarily on Docker Compose intent and records that no manifests were validated.",
+    "Provision a dedicated namespace named wger. Deploy web, nginx, celery_worker, and celery_beat as Deployments. Deploy db and cache as StatefulSets. Create ClusterIP Services for nginx, web, db, and cache; celery_worker and celery_beat do not need Services because they expose no network ports.",
+    "Expose only nginx publicly for baseline validation. Create a minimal Kubernetes Ingress for nginx and use the AWS Load Balancer Controller to provision an internet-facing ALB in tagged public subnets. Keep web, db, cache, and worker processes internal. HTTP-only is sufficient for baseline smoke testing; do not add ACM/TLS without a provided hostname and certificate requirement.",
+    "Always include the EKS managed add-ons vpc-cni, kube-proxy, and coredns, with vpc-cni installed before compute. Enable the EKS OIDC provider and IRSA; IRSA is required for the AWS Load Balancer Controller and CSI drivers.",
+    "Persistence decisions: db uses persistent PostgreSQL data at /var/lib/postgresql/data with a PVC on EBS and should run as a StatefulSet; cache uses persistent Redis data at /data with a PVC on EBS and should run as a StatefulSet; celery_beat stores scheduler state at /home/wger/beat and should use a PVC on EBS as a single-replica Deployment.",
+    "Shared application storage decisions: /home/wger/static and /home/wger/media are persistent shared runtime data, not config. They must be mounted by multiple pods (web, nginx, and celery_worker), so EBS is not sufficient for the shared access pattern. Plan RWX PVCs backed by EFS for static and media.",
+    "Config classification: ./config/nginx.conf and ./config/redis.conf are config-like paths and must not use PVCs. Because the source files were not provided, they must either be supplied later via ConfigMaps or baked into custom images. Likewise, ./config/prod.env is missing; its values must be split into Kubernetes Secret(s) and ConfigMap(s) once the file contents are available. The compose POSTGRES_PASSWORD value should be treated as a Secret, not left as plaintext config.",
+    "Compose-specific orchestration behavior must not be carried over directly: depends_on ordering is not a Kubernetes dependency mechanism, so readiness/liveness/startup probes and Service DNS should be used instead. The compose network name wger_network is ignored and replaced by Kubernetes networking and service discovery.",
+    "Node sizing audit using the required t3.small allocatable memory of 1.4 GiB per node: web 512 Mi, nginx 128 Mi, db 512 Mi, cache 256 Mi, celery_worker 512 Mi, celery_beat 256 Mi; total estimated application memory request baseline is 2176 Mi. Three nodes provide about 4.2 GiB allocatable total, which leaves room for the application plus mandatory cluster add-ons and required controllers; two nodes would be too tight once controller overhead is included.",
+    "Because PVCs are required, plan the EBS CSI driver and ensure a default EBS StorageClass exists for PVCs that omit storageClassName; otherwise those PVCs will remain Pending. Because static and media require shared RWX access, also plan the EFS CSI driver and an EFS file system for those shared volumes."
+  ]
+}

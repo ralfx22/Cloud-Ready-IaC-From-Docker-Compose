@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |-
+    Kompose warnings / conversion notes:
+    - docker-compose `version` field is obsolete (Kompose warning).
+    - Kompose skipped creating a Service for 'quotes' because no ports were declared; a ClusterIP Service for 'quotes' on port 5000 was added based on the Api environment variable (QUOTES_API=http://quotes:5000).
+
+    Architecture plan reconciliations / assumptions applied:
+    - All resources placed into namespace 'sme-app'.
+    - 'frontend' is exposed via an ALB-backed Ingress (ingressClassName: alb) configured as internet-facing for baseline validation. ALB controller must be installed and granted IRSA permissions.
+    - Ingress is HTTP-only for baseline (no certificate ARN provided). The ALB annotation alb.ingress.kubernetes.io/listen-ports specifies HTTP on port 80.
+    - Services are ClusterIP. The frontend Service exposes port 8080 and targets container port 80. The api Service exposes 3000 and targets container port 3000. The quotes Service (added) exposes 5000 and targets container port 5000.
+
+    Gaps / further actions / caveats:
+    - The quotes service port (5000) is inferred from the api environment variable. If incorrect, adjust the quotes service targetPort and/or the quotes container configuration.
+    - No probes (liveness/readiness) or resource requests/limits were present in the Kompose output; none were added. Consider adding probes and resource limits in a follow-up iteration.
+    - No PVCs were detected; no PersistentVolumeClaims were created. If persistent storage is required, add PVCs and storageClassName as appropriate.
+    - Image pull credentials / private registries are not configured. If images are private, add ImagePullSecrets or configure ECR access accordingly.
+    - Ensure AWS Load Balancer Controller is installed and public subnets are properly tagged so the ALB can be provisioned.

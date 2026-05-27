@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+  labels:
+    app.kubernetes.io/part-of: sme-app
+data:
+  summary: |
+    Migration baseline generated for namespace sme-app using standard Kubernetes APIs only.
+    Workloads remain Deployments with 1 replica each: frontend, api, and quotes.
+    Services are ClusterIP only; public access is provided by an ALB Ingress to frontend.
+  kompose-warnings: |
+    WARN docker-compose.yml: `version` is obsolete.
+    WARN Service "quotes" won't be created because 'ports' is not specified.
+  assumptions: |
+    The quotes Service and port 5000 were added from the architecture plan and from api env QUOTES_API=http://quotes:5000.
+    No probes were added because no exact probe path, port, or exec command was evidenced in Compose or Kompose output.
+    No volumes, PVCs, app ConfigMaps, or Secrets were added because none were defined in the provided inputs.
+    Compose depends_on was not translated into Kubernetes startup ordering or readiness guarantees.
+    Frontend runtime API endpoint configuration is not defined in Compose; image-baked behavior is assumed for this baseline.
+    Memory requests were set to align with the architecture plan sizing assumptions: frontend 128Mi, api 512Mi, quotes 512Mi.
+    Ingress is HTTP-only for baseline validation because no TLS requirement or ACM certificate ARN was provided.
+  unresolved-issues: |
+    The quotes container listen port is inferred as 5000 and should be validated at runtime against the image behavior.
+    The referenced images are external prebuilt artifacts and were not rebuilt or runtime-verified during manifest generation.
+    If any container requires additional environment variables or different internal ports, these manifests will need adjustment after validation.

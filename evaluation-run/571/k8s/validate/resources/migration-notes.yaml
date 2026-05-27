@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: wger
+  labels:
+    app.kubernetes.io/part-of: wger
+data:
+  notes.txt: |
+    - Kompose produced no Kubernetes resources because ./config/prod.env was missing; these manifests were reconstructed from Docker Compose intent and the architecture plan.
+    - Placeholder env resources wger-env and wger-env-secret are intentionally empty so kubectl apply succeeds without inventing application-specific keys from the missing prod.env file.
+    - Missing source artifacts: ./config/prod.env, ./config/nginx.conf, and ./config/redis.conf.
+    - nginx-config and redis-config were generated as minimal baseline replacements for validation. Replace them with the authoritative source configs or bake those configs into custom images.
+    - db-secret preserves the compose POSTGRES_PASSWORD value in a Kubernetes Secret. Rotate this credential before production use.
+    - Stateful workloads were implemented per plan: db and cache as StatefulSets; web, nginx, celery-worker, and celery-beat as Deployments.
+    - Additional headless Services db-headless and cache-headless were added as governing Services for the StatefulSets while retaining the plan-required ClusterIP Services db and cache.
+    - PostgreSQL sets PGDATA=/var/lib/postgresql/data/pgdata so a freshly formatted volume's lost+found directory at the mount root does not block initialization.
+    - Shared static-data and media-data PVCs require RWX storage and are intended for EFS-backed provisioning or equivalent. storageClassName was intentionally omitted.
+    - postgres-data, redis-data, and celery-beat-data require PVC provisioning such as the EBS CSI driver with a default compatible StorageClass, or pre-bound PVs.
+    - securityContext.fsGroup was set to 1000 for wger application pods, 70 for postgres, and 999 for redis to support mounted-volume permissions. Verify image runtime GIDs if you replace the images.
+    - Kubernetes probes were omitted in this baseline because source healthchecks depended on missing configuration or container-specific init/CLI behavior and were not carried forward as validation-safe defaults.
+    - The public entrypoint is an HTTP-only ALB-backed Ingress for the nginx Service. No TLS or ACM certificate annotation was added because no hostname or certificate requirement was provided.
+  unresolved.txt: |
+    - The missing prod.env means the web, celery-worker, and celery-beat containers may not start successfully until the required application environment variables are supplied.
+    - The generated nginx and redis configs are functional placeholders only and may not reflect the upstream deployment's exact behavior.
+    - The RWX PVCs will remain Pending on clusters that do not provide an RWX-capable storage backend such as EFS.

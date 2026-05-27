@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+  labels:
+    app: bookstore-account-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-account-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-account-service
+    spec:
+      containers:
+        - name: bookstore-account-service
+          image: ralfx22/bsa-account-service:latest
+          ports:
+            - containerPort: 4001
+              protocol: TCP
+          env:
+            - name: SERVER_PORT
+              value: "4001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+          resources:
+            requests:
+              memory: "640Mi"
+            limits:
+              memory: "640Mi"
+      restartPolicy: Always

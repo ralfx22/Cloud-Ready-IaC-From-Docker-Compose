@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: wger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-beat
+  template:
+    metadata:
+      labels:
+        app: celery-beat
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: celery-beat
+          image: docker.io/wger/server:latest
+          command: ["/start-beat"]
+          envFrom:
+            - configMapRef:
+                name: wger-env
+          volumeMounts:
+            - name: celery-beat
+              mountPath: /home/wger/beat/
+      volumes:
+        - name: celery-beat
+          persistentVolumeClaim:
+            claimName: celery-beat-pvc

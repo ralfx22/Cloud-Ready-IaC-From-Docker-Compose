@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: migration-notes
+    app.kubernetes.io/part-of: quotes-app
+data:
+  notes: |-
+    - Added Namespace quotes-app and placed all resources in that namespace per the architecture plan.
+    - Kept frontend, api, and quotes as stateless Deployments with ClusterIP Services; no StatefulSets, PVCs, or volumes were added because the plan states there is no persistence intent.
+    - Added an internet-facing ALB Ingress for frontend with ingressClassName alb and HTTP listener only because no hostname, ACM certificate ARN, or TLS requirement was provided.
+    - Frontend remains internally served on Service port 8080 to container port 80, matching the plan and Kompose realization.
+    - Added the missing quotes Service on port 5000 and declared containerPort 5000 in the quotes Deployment because api is configured to call http://quotes:5000 and Kompose did not generate a quotes Service.
+    - QUOTES_API was preserved as non-secret runtime configuration and sourced from the api-config ConfigMap.
+    - No probes were added because no exact readiness, liveness, or startup probe definitions were evidenced in the inputs.
+    - No Secrets were added because no secrets were present in Compose or inferred by the plan.
+    - Compose depends_on was not converted into startup ordering; Kubernetes will rely on service discovery and application retry behavior.
+    - ALB provisioning depends on the AWS Load Balancer Controller being installed and subnet tagging being configured as described by the architecture plan.
+  kompose-stderr: |-
+    WARN docker-compose.yml: `version` is obsolete
+    WARN Service "quotes" won't be created because 'ports' is not specified
+  unresolved-issues: |-
+    - The Compose file references local build contexts and local image names (api, frontend, quotes).
+    - EKS worker nodes cannot pull local-only images; publish these images to a reachable container registry before deployment.
+    - The actual application listen port for quotes was not declared in Compose; port 5000 was added from the api runtime configuration and architecture plan to produce a working internal Service.

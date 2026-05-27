@@ -1,0 +1,11 @@
+namespace: ns-310
+resources:
+  - resources/api-deployment.yaml
+  - resources/api-service.yaml
+  - resources/frontend-deployment.yaml
+  - resources/frontend-service.yaml
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/placeholder-secret.yaml
+  - resources/quotes-deployment.yaml
+  - resources/quotes-service.yaml

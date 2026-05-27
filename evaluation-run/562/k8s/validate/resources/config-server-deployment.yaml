@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: config-server
+    spec:
+      containers:
+        - name: config-server
+          image: ralfx22/rrb-config-server
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+          env:
+            - name: spring.profiles.active
+              value: docker
+          resources:
+            requests:
+              memory: 512Mi
+            limits:
+              memory: 512Mi
+      restartPolicy: Always

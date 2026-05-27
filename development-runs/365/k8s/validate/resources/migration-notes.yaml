@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    Kompose warnings:
+    - `version` is obsolete in the compose file.
+    - Service 'quotes' wasn't created by kompose because no ports were specified; a ClusterIP Service for quotes was added on port 5000 to restore inter-service DNS connectivity (api -> quotes).
+
+    Key assumptions & decisions (from architecture plan):
+    - All resources placed in namespace: sme-app.
+    - Frontend is exposed via an ALB Ingress (ingressClassName: alb). ALB is configured as internet-facing and will route HTTP (port 80) to the frontend service's port 8080.
+    - No TLS/ACM configured for baseline (HTTP-only). Add certificate ARN and redirect annotations when TLS is required.
+    - quotes is assumed to listen on TCP port 5000 (inferred from QUOTES_API=http://quotes:5000). A ClusterIP service and containerPort 5000 were added.
+    - All Services are ClusterIP (internal) except they are reachable via ALB only for the frontend.
+    - No probes were present in original manifests; probes have been omitted intentionally. Add explicit readiness/liveness probes if evidence of exact path/port/exec is available.
+    - No PVCs or Secrets detected; no PersistentVolumes or Secret CRs were added. Add Secrets/ConfigMaps for sensitive data if required.
+
+    Operational notes:
+    - Ensure AWS Load Balancer Controller (with IRSA) is installed in the cluster and public subnets are tagged appropriately so the ALB can be provisioned.
+    - Ensure core EKS add-ons (aws-vpc-cni, kube-proxy, coredns) are present and healthy before heavy traffic.

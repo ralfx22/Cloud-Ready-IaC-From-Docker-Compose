@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-api-postgres
+  template:
+    metadata:
+      labels:
+        app: transaction-api-postgres
+    spec:
+      containers:
+        - name: transaction-api-postgres
+          image: postgres:15.2
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: admin
+            - name: POSTGRES_USER
+              value: root
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: transaction-api-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-api-postgres
+  namespace: rrb-microservices
+spec:
+  type: ClusterIP
+  ports:
+    - name: "5432"
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: transaction-api-postgres

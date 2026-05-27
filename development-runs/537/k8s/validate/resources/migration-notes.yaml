@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes.txt: |
+    - Added the required `sme-app` namespace.
+    - Cleaned up Kompose annotations and standardized on generic `app: <name>` labels.
+    - Created the missing Service for `quotes` to expose port 5000 so the internal API dependency can route properly, fixing the Kompose warning.
+    - Added `containerPort: 5000` to the quotes Deployment to correctly align with the newly created Service.
+    - Services configured as ClusterIP following the plan. Internal traffic routes via Kubernetes DNS names (`http://quotes:5000`).
+    - Added an AWS ALB ingress resource for the `frontend` Service on port 8080. Configured as an internet-facing ALB with HTTP on port 80.
+    - All services are completely stateless, so no volumes or persistent volume claims have been provisioned as requested.

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api
+  namespace: rrb-microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-api
+  template:
+    metadata:
+      labels:
+        app: transaction-api
+    spec:
+      containers:
+        - name: transaction-api
+          image: ralfx22/rrb-transaction-api
+          env:
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+            - name: spring.profiles.active
+              value: docker

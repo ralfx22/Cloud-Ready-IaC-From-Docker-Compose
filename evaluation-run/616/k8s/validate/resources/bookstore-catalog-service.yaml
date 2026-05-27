@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-catalog-service
+  namespace: bookstore
+  labels:
+    app: bookstore-catalog-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-catalog-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-catalog-service
+    spec:
+      containers:
+        - name: bookstore-catalog-service
+          image: ralfx22/bsa-catalog-service:latest
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+            - name: SERVER_PORT
+              value: "6001"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: ZIPKIN_HOST
+              value: "bookstore-zipkin:9411"
+            - name: SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS
+              value: "true"
+          ports:
+            - containerPort: 6001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-catalog-service
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "6001"
+      port: 6001
+      targetPort: 6001
+  selector:
+    app: bookstore-catalog-service

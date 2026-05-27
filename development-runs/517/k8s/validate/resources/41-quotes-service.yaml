@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: quotes
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: quotes
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  NOTES: |
+    Migration and conversion notes for SME app
+
+    Source: docker-compose provided by user; converted with Kompose.
+
+    Kompose stderr/warnings:
+    - WARN: `version` is obsolete in docker-compose file.
+    - WARN: Service "quotes" won't be created because 'ports' is not specified (Kompose created only a Deployment for 'quotes').
+
+    Actions taken in these Kubernetes manifests (rationale / assumptions):
+    - Created dedicated namespace: sme-app (per architecture plan). All resources placed in this namespace.
+    - Restored a ClusterIP Service for 'quotes' exposing port 5000 so 'api' can reach it at http://quotes:5000 as referenced by the api's QUOTES_API environment variable.
+      This service was missing in Kompose output because Compose did not declare ports for 'quotes'.
+    - Assumed the quotes container listens on port 5000 (inferred from QUOTES_API). The quotes Deployment now declares containerPort: 5000 and a Service targets 5000.
+      Confirm this port with the developer; adjust if the container listens on a different internal port.
+    - frontend Service exposes port 8080 (ClusterIP) and routes to container port 80. An Ingress (IngressClassName: alb) was added to provide an external HTTP entrypoint for smoke tests.
+      The Ingress is annotated for the AWS Load Balancer Controller to provision an internet-facing ALB. For baseline validation this is HTTP-only.
+    - api and quotes are internal-only (ClusterIP) per plan. api Service exposes port 3000 and matches the api Deployment containerPort 3000.
+    - Probes (readiness/liveness) were omitted because no explicit probe details (path/port/exec) were present in source. Add explicit probes in a later pass when endpoints are confirmed.
+    - No PersistentVolumes were present in the compose input; therefore no PVCs or PVs were created.
+    - No CRDs or non-standard Kubernetes APIs are used. The Ingress uses standard networking.k8s.io/v1 and annotations compatible with the AWS Load Balancer Controller.
+
+    Validation checklist / follow-ups:
+    - Verify that images (ralfx22/sme-*) are accessible from the cluster nodes (public Docker Hub or registry with credentials).
+    - Confirm the actual listening port of the quotes service inside the container; if different, update quotes Deployment and Service, and any environment variables referencing it.
+    - If HTTPS is required for the Ingress, provide an ACM certificate ARN and update the Ingress annotations accordingly.
+    - Ensure the AWS Load Balancer Controller is installed in the cluster with IRSA and required permissions before applying the Ingress to have the ALB provisioned.

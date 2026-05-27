@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: app
+  labels:
+    io.kompose.service: api
+    app: api
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-150.yml -o k8s-150/
+    kompose.version: "1.34.0 (cbf2835db)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        io.kompose.service: api
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/sme-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: QUOTES_API
+              value: "http://quotes:5000"
+      restartPolicy: Always

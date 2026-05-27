@@ -1,0 +1,60 @@
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline architecture: dedicated namespace 'sme-app' on a managed EKS cluster with a managed node group, IAM OIDC provider enabled, and IRSA used for the AWS Load Balancer Controller.",
+    "Mandatory EKS managed add-ons to provision: vpc-cni, kube-proxy, and coredns. vpc-cni should be created before compute (before_compute=true) so nodes can become Ready reliably.",
+    "Ingress plan: expose only the frontend publicly through an AWS ALB-backed Kubernetes Ingress for smoke testing. Keep api and quotes internal-only. HTTP-only is sufficient for baseline validation; no ACM certificate/TLS requirement is indicated by the inputs.",
+    "Network plan: 2 public and 2 private subnets across at least 2 AZs. Public subnets must carry ALB discovery tags, private subnets host worker nodes, and a NAT gateway is required so private nodes can pull images and reach AWS/public endpoints.",
+    "State and storage: no volumes or bind mounts are defined in Compose or the generated manifests, so all three workloads are treated as stateless Deployments with no PVCs. EBS CSI is not required for this baseline.",
+    "Config classification: QUOTES_API is plain application configuration, not a secret. No secrets are evidenced in the inputs. Remaining app configuration appears image-baked or embedded in container defaults.",
+    "Compose/K8s discrepancy: Kompose did not generate a Service for 'quotes' because no ports were declared, but api is configured with QUOTES_API=http://quotes:5000 and therefore expects in-cluster DNS/service discovery. For a working baseline, add an internal ClusterIP Service named 'quotes' on port 5000; otherwise api cannot resolve/reach quotes.",
+    "Compose/K8s port realization: api maps 3000->3000 and Kompose created Service port 3000 as expected. frontend maps 8080->80 and Kompose created a Service on port 8080 targeting container port 80; the ALB Ingress should route to the frontend Service on port 8080.",
+    "No persistence intent was detected, so there is no need for StatefulSets, PVCs, or a default StorageClass. No HPA is present, so metrics-server is not required. No DNS automation or certificate automation signals were provided, so ExternalDNS and cert-manager are omitted.",
+    "Node sizing math using t3.small allocatable memory of 1.4 GiB per node: app pod estimates -> frontend 512 Mi, api 512 Mi, quotes 512 Mi; total app memory request estimate = 1536 Mi. Baseline system/controller estimate for 2 nodes -> coredns ~140 Mi total, vpc-cni ~200 Mi total, kube-proxy ~100 Mi total, AWS Load Balancer Controller ~128 Mi; combined estimated total ~2104 Mi. Two nodes provide ~2867 Mi allocatable, which exceeds estimated workload needs and also easily fits expected pod count.",
+    "Expected pod count on 2 nodes is low: 3 application pods + 2 coredns + 2 vpc-cni + 2 kube-proxy + 1 AWS Load Balancer Controller = about 10 pods total, which is within t3.small pod-density limits for a minimal cluster.",
+    "Key Kompose messages to record: 'version is obsolete' warning for Compose v2 syntax metadata, and 'Service \"quotes\" won't be created because ports is not specified', which is the critical functional gap in the generated manifests."
+  ]
+}

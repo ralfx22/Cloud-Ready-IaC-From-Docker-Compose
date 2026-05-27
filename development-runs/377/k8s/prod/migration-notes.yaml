@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    Applied architecture plan namespace: rrb-app.
+    Added baseline ALB Ingress for api-gateway with ingressClassName alb, internet-facing scheme, target-type ip, and HTTP listener on port 80.
+    Kept all Services as ClusterIP per architecture plan; only api-gateway is exposed through Ingress.
+    Replaced Kompose-generated standalone Pods for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api with Deployments for controller-managed reconciliation.
+    Did not create Services for account-api, asset-management-api, notification-api, or transaction-api because no ports were evidenced in Compose or Kompose output.
+    Removed duplicate service port definitions created by Kompose on several Services and normalized ports to single named ports.
+    Omitted all probes because no exact HTTP path, port+path combination, or exec probe was evidenced in the inputs.
+    Corrected stateful storage mount paths to image-conventional runtime locations:
+      - MongoDB: /data/db instead of /data/mongo
+      - MySQL: /var/lib/mysql instead of /data/mysql
+      - PostgreSQL: /var/lib/postgresql/data instead of /data/postgres
+    Converted MongoDB, MySQL, and PostgreSQL from Deployments to StatefulSets as low-risk stateful workloads aligned with the plan.
+    Preserved PVC-backed persistence for MongoDB, MySQL, PostgreSQL, and Grafana.
+    Removed config-server PVC usage because /app/resources/config-files is config-like, not runtime data; source host directory was reported missing, so no ConfigMap content was assumed.
+    Removed Prometheus PVC usage because the compose mount targeted a config file path (/etc/prometheus/prometheus.yml), which is config-like rather than persistent data; source file was reported missing, so no ConfigMap content was assumed.
+    Kafka configuration was corrected for Kubernetes-safe addressing:
+      - removed HOST://localhost:9092 from advertised listeners
+      - replaced advertised listener with PLAINTEXT://notification-api-kafka:9092
+      - bound listeners to 0.0.0.0 for PLAINTEXT and CONTROLLER
+      - exposed only client port 9092 via Service
+    Moved sensitive values from plain env into Secrets for MySQL, PostgreSQL, and Grafana.
+    Left non-sensitive Spring settings as plain environment variables.
+    Kompose warnings recorded:
+      - Docker Compose version field marked obsolete.
+      - Host bind mounts were unsupported and source paths were missing for account-api-mongo, asset-management-api-mysql, config-server, grafana, prometheus, and transaction-api-postgres.
+      - Services account-api, asset-management-api, notification-api, and transaction-api were not created by Kompose because ports were not specified.
+    Unresolved artifact/config issues:
+      - config-server external config files were not available at conversion time.
+      - prometheus configuration file was not available at conversion time.
+      - application internal ports for account-api, asset-management-api, notification-api, and transaction-api are not evidenced, so no containerPorts or Services were added.

@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes.txt: |
+    - Namespace set to rrb-app for all namespaced resources.
+    - Replaced Kompose standalone Pod manifests with controller-managed workloads for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api.
+    - Converted MongoDB, MySQL, and PostgreSQL to StatefulSets per architecture plan.
+    - Corrected database storage mount paths to image-expected runtime locations: MongoDB -> /data/db, MySQL -> /var/lib/mysql, PostgreSQL -> /var/lib/postgresql/data with PGDATA=/var/lib/postgresql/data/pgdata.
+    - Database and Grafana PVC mounts use created subdirectories so freshly formatted EBS-backed filesystems with lost+found at the volume root do not break initialization.
+    - Added pod fsGroup for persistent-volume workloads that commonly run as non-root users: MongoDB/MySQL/PostgreSQL/Grafana.
+    - Deduplicated Service ports that Kompose generated from both ports and expose.
+    - Kept all Services as ClusterIP; api-gateway is the only public validation entrypoint and is exposed through a standard networking.k8s.io/v1 Ingress configured for AWS Load Balancer Controller with ingressClassName=alb.
+    - No probes were included because no exact HTTP path, port+path combination beyond service ports, or exec command was evidenced for liveness/readiness/startup behavior.
+    - No Services were created for account-api, asset-management-api, notification-api, or transaction-api because the source Compose and Kompose warnings showed no declared ports for those workloads, and the architecture plan did not require Service objects for them.
+    - Secret-like values were moved from inline environment variables into standard Kubernetes Secret resources for MySQL, PostgreSQL, and Grafana. Values still reflect Compose defaults and should be rotated for real environments.
+    - Config-server host bind mount ./config-files -> /app/resources/config-files was not preserved. The source path was missing during conversion and the architecture plan classifies it as config, not persistent data. The image must contain required config or a future ConfigMap/Secret must be supplied.
+    - Prometheus host file mount ./prometheus-configuration.yml -> /etc/prometheus/prometheus.yml was not preserved as a PVC. The source file was missing during conversion and the architecture plan classifies it as config. A minimal placeholder ConfigMap was added so the pod can start; real scrape configuration still needs to be supplied later.
+    - Kafka networking was rewritten for Kubernetes single-broker topology. Client traffic is advertised as notification-api-kafka:9092 via Service DNS, while controller quorum traffic is pod-local using localhost:29093. The Compose localhost client advertisement was removed because it is invalid for Kubernetes clients.
+    - Unresolved artifact/runtime issues:
+      * Custom images ralfx22/rrb-account-api, ralfx22/rrb-api-gateway, ralfx22/rrb-asset-management-api, ralfx22/rrb-config-server, ralfx22/rrb-discovery-server, ralfx22/rrb-notification-api, and ralfx22/rrb-transaction-api must exist and be pullable by the cluster.
+      * Application-level configuration inside the custom images may still reference Compose-specific assumptions not visible in the provided manifests.
+      * Config-server may fail or serve incomplete configuration until its missing external config content is baked into the image or supplied via ConfigMap/Secret.
+      * Prometheus currently scrapes only itself because the original prometheus-configuration.yml content was not available.
+      * ALB validation requires aws-load-balancer-controller to be installed and subnet tags to allow public ALB placement.
+      * PersistentVolumeClaims require a working default StorageClass and the aws-ebs-csi-driver in EKS so claims do not remain Pending.
+    - Source conversion warnings captured from Kompose:
+      * Compose version field was reported as obsolete.
+      * Host bind mounts for MongoDB, MySQL, config-server, Grafana, Prometheus config file, and PostgreSQL were reported missing or unsupported on the host.
+      * Kompose warned that account-api, asset-management-api, notification-api, and transaction-api would not get Services because ports were not specified.

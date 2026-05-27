@@ -1,0 +1,326 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-prometheus
+  namespace: bookstore
+  labels:
+    app: bookstore-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-prometheus
+  template:
+    metadata:
+      labels:
+        app: bookstore-prometheus
+    spec:
+      containers:
+        - name: bookstore-prometheus
+          image: ralfx22/bsa-prometheus:latest
+          ports:
+            - name: http
+              containerPort: 9090
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-prometheus
+  namespace: bookstore
+  labels:
+    app: bookstore-prometheus
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-grafana
+  namespace: bookstore
+  labels:
+    app: bookstore-grafana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstore-grafana
+  template:
+    metadata:
+      labels:
+        app: bookstore-grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      initContainers:
+        - name: init-grafana-data
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - mkdir -p /mnt/grafana-data && chown -R 472:472 /mnt/grafana-data
+          volumeMounts:
+            - name: bookstore-graphana-volume
+              mountPath: /mnt
+      containers:
+        - name: bookstore-grafana
+          image: ralfx22/bsa-grafana:latest
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+            - name: bookstore-graphana-volume
+              mountPath: /var/lib/grafana
+              subPath: grafana-data
+      volumes:
+        - name: bookstore-graphana-volume
+          persistentVolumeClaim:
+            claimName: bookstore-graphana-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-grafana
+  namespace: bookstore
+  labels:
+    app: bookstore-grafana
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-grafana
+  ports:
+    - name: http
+      port: 3030
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-telegraf
+  namespace: bookstore
+  labels:
+    app: bookstore-telegraf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-telegraf
+  template:
+    metadata:
+      labels:
+        app: bookstore-telegraf
+    spec:
+      containers:
+        - name: bookstore-telegraf
+          image: ralfx22/bsa-telegraf:latest
+          env:
+            - name: HOSTNAME
+              value: bookstore-telegraf
+          ports:
+            - name: statsd
+              containerPort: 8125
+              protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-telegraf
+  namespace: bookstore
+  labels:
+    app: bookstore-telegraf
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-telegraf
+  ports:
+    - name: statsd
+      port: 8125
+      targetPort: statsd
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-influxdb
+  namespace: bookstore
+  labels:
+    app: bookstore-influxdb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstore-influxdb
+  template:
+    metadata:
+      labels:
+        app: bookstore-influxdb
+    spec:
+      initContainers:
+        - name: init-influxdb-data
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - mkdir -p /mnt/influxdb-data && chmod 0777 /mnt/influxdb-data
+          volumeMounts:
+            - name: booksture-influxdb-volume
+              mountPath: /mnt
+      containers:
+        - name: bookstore-influxdb
+          image: influxdb:1.8
+          ports:
+            - name: http
+              containerPort: 8086
+              protocol: TCP
+          volumeMounts:
+            - name: booksture-influxdb-volume
+              mountPath: /var/lib/influxdb
+              subPath: influxdb-data
+      volumes:
+        - name: booksture-influxdb-volume
+          persistentVolumeClaim:
+            claimName: booksture-influxdb-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-influxdb
+  namespace: bookstore
+  labels:
+    app: bookstore-influxdb
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-influxdb
+  ports:
+    - name: http
+      port: 8086
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-kapacitor
+  namespace: bookstore
+  labels:
+    app: bookstore-kapacitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-kapacitor
+  template:
+    metadata:
+      labels:
+        app: bookstore-kapacitor
+    spec:
+      containers:
+        - name: bookstore-kapacitor
+          image: kapacitor:1.7
+          env:
+            - name: KAPACITOR_HOSTNAME
+              value: bookstore-kapacitor
+            - name: KAPACITOR_INFLUXDB_0_URLS_0
+              value: http://bookstore-influxdb:8086
+          ports:
+            - name: http
+              containerPort: 9092
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-kapacitor
+  namespace: bookstore
+  labels:
+    app: bookstore-kapacitor
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-kapacitor
+  ports:
+    - name: http
+      port: 9092
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-chronograf
+  namespace: bookstore
+  labels:
+    app: bookstore-chronograf
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstore-chronograf
+  template:
+    metadata:
+      labels:
+        app: bookstore-chronograf
+    spec:
+      initContainers:
+        - name: init-chronograf-data
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - mkdir -p /mnt/chronograf-data && chmod 0777 /mnt/chronograf-data
+          volumeMounts:
+            - name: booksture-chronograf-volume
+              mountPath: /mnt
+      containers:
+        - name: bookstore-chronograf
+          image: chronograf:1.7.3
+          env:
+            - name: INFLUXDB_URL
+              value: http://bookstore-influxdb:8086
+            - name: KAPACITOR_URL
+              value: http://bookstore-kapacitor:9092
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+          volumeMounts:
+            - name: booksture-chronograf-volume
+              mountPath: /var/lib/chronograf
+              subPath: chronograf-data
+      volumes:
+        - name: booksture-chronograf-volume
+          persistentVolumeClaim:
+            claimName: booksture-chronograf-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-chronograf
+  namespace: bookstore
+  labels:
+    app: bookstore-chronograf
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-chronograf
+  ports:
+    - name: http
+      port: 8888
+      targetPort: http
+      protocol: TCP

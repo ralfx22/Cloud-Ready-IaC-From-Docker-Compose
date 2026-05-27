@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: wger
+  labels:
+    app.kubernetes.io/part-of: wger
+data:
+  notes: |
+    === Kompose Failure ===
+    Kompose failed entirely because the referenced env_file ./config/prod.env does not exist.
+    All K8s manifests were hand-crafted from Docker Compose intent and the architecture plan.
+
+    === Unresolved Build/Artifact Issues ===
+    - No images require building; all services use public container images.
+    - The file ./config/prod.env was not available. A placeholder Secret 'wger-prod-env' has been
+      created with common Django/wger environment variable keys. The user MUST review and fill
+      in correct values (especially SECRET_KEY, DATABASE_URL, CACHE_URL, SITE_URL, etc.)
+      before deploying to production.
+
+    === Config Files ===
+    - nginx.conf: A placeholder ConfigMap 'nginx-config' has been created with a reasonable
+      default nginx reverse proxy configuration. The user should review and adjust as needed,
+      especially if the original ./config/nginx.conf had custom settings.
+    - redis.conf: A placeholder ConfigMap 'redis-config' has been created with basic Redis
+      settings. The user should review and adjust (e.g., memory limits, eviction policy).
+
+    === Storage ===
+    - postgres-data: PVC via StatefulSet volumeClaimTemplate (RWO). PGDATA set to
+      /var/lib/postgresql/data/pgdata subdirectory to avoid lost+found conflicts on EBS.
+    - redis-data: PVC via StatefulSet volumeClaimTemplate (RWO).
+    - celery-beat: PVC via StatefulSet volumeClaimTemplate (RWO).
+    - media: Standalone PVC (RWO) shared between web, nginx (read-only), and celery-worker
+      Deployments. Pod affinity is used to co-locate all media consumers on the same node
+      since EBS volumes are RWO. For multi-node or multi-replica scaling, migrate to EFS
+      (ReadWriteMany) storage.
+    - static: emptyDir populated by an init container in the nginx Deployment that copies
+      static files from the wger/server image. web also mounts an emptyDir for static
+      (collectstatic output stays local). If web generates new static files at runtime,
+      the nginx pod must be restarted to pick them up.
+    - No storageClassName is specified on PVCs; the cluster default StorageClass will be used.
+      The architecture plan recommends creating a gp3 StorageClass and setting it as default.
+
+    === Pod Affinity for RWO Media Volume ===
+    - web, nginx, and celery-worker pods use podAffinity with label
+      'app.kubernetes.io/name: media-consumer' on topologyKey kubernetes.io/hostname.
+    - nginx and celery-worker pods carry the label 'app.kubernetes.io/name-media: media-consumer'
+      to satisfy this affinity. web uses the label selector to be co-located with them.
+    - This ensures all pods sharing the RWO media PVC land on the same node.
+
+    === Probes ===
+    - web: liveness/readiness via exec wget to localhost:8000 (from Compose healthcheck).
+      initialDelaySeconds for liveness is 300s matching Compose start_period.
+    - nginx: liveness via exec 'service nginx status' (from Compose healthcheck).
+      readiness via httpGet /health on port 80 (added for ALB health checks).
+    - db: liveness/readiness via exec 'pg_isready -U wger' (from Compose healthcheck).
+    - cache: liveness/readiness via exec 'redis-cli ping' (from Compose healthcheck).
+    - celery-worker: liveness/readiness via exec 'celery -A wger inspect ping'
+      (from Compose healthcheck).
+    - celery-beat: No healthcheck in Compose; probes OMITTED.
+
+    === Networking ===
+    - All services are ClusterIP. nginx is exposed externally via ALB Ingress.
+    - The Compose 'wger_network' is not needed in K8s; all pods in the 'wger' namespace
+      can communicate via service DNS names.
+    - celery-beat has a headless Service (clusterIP: None) as required by StatefulSet.
+      It has no real ports; a placeholder port entry is included for spec validity.
+
+    === Compose Features Not Carried Over ===
+    - Logging driver json-file with rotation: handled by kubelet in K8s.
+    - restart: unless-stopped: maps to restartPolicy: Always (K8s default).
+    - depends_on with condition: not directly applicable; use init containers or
+      readiness probes for dependency ordering if needed.
+    - mem_limit on cache: not set (was commented out in Compose). Use resources.limits
+      if needed.
+
+    === Security ===
+    - fsGroup: 1000 is set on web, celery-worker, and celery-beat pods so that mounted
+      PVCs are accessible by the wger user (UID 1000).
+    - fsGroup: 999 is set on db pod for the postgres user group.
+    - fsGroup: 999 is set on cache pod for the redis user group.
+    - The Secret 'wger-prod-env' contains placeholder credentials. Replace all values
+      before production use.
+    - The Secret 'db-credentials' has hardcoded default passwords from Compose. Change
+      these for production.
+
+    === Ingress ===
+    - ALB Ingress is configured for HTTP-only (port 80). For HTTPS, add
+      alb.ingress.kubernetes.io/certificate-arn and ssl-redirect annotations.
+    - The /health path in nginx config returns 200 without authentication for ALB
+      health checks.
+    - AWS Load Balancer Controller must be installed in the cluster for the Ingress
+      to provision an ALB.

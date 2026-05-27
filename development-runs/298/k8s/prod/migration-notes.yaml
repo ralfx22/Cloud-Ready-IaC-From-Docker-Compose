@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  NOTES: |
+    - Kompose warnings observed:
+      * docker-compose 'version' is obsolete (ignored).
+      * Kompose did not create a Service for 'quotes' because no ports were specified in the compose file.
+
+    - Decisions and assumptions made during migration:
+      * Namespace 'sme-app' created and all resources placed into this namespace.
+      * A ClusterIP Service for 'quotes' was added on port 5000 because the API service expects QUOTES_API=http://quotes:5000.
+        The original Compose did not list ports for 'quotes', but the environment variable indicates the service port is 5000.
+      * The 'quotes' Deployment was given a containerPort of 5000 to match the expected service port. ContainerPorts are informational only.
+      * The frontend Service port was adjusted to match the containerPort (80) instead of using the host-side mapping (8080) from docker-compose. In Kubernetes the Service should route to the container port.
+      * All Services are ClusterIP (internal). An Ingress was added to expose the frontend publicly using host 'example.com' because no architecture plan ingress details were provided. If a different host, ingress class, or ALB is required, adjust the Ingress accordingly.
+      * No readiness or liveness probes were added because there was no explicit evidence of probe paths/ports in the compose or Kompose output. Per migration rules, probes are omitted unless exact values are known.
+      * No CRDs or non-standard Kubernetes APIs are used.
+
+    - Action items for operators after applying these manifests:
+      * Replace the placeholder host in the Ingress (example.com) with the real host and configure DNS.
+      * If an AWS ALB Ingress is desired, add the appropriate ingressClassName and provider-specific annotations.
+      * Confirm the quotes service actually listens on port 5000 inside the container; if not, adjust the containerPort and Service targetPort accordingly.
+

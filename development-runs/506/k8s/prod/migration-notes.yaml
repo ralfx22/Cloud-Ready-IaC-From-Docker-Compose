@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: default
+data:
+  notes: |
+    - Architecture plan JSON was not provided; namespace default was used and baseline ALB ingress was created only for api-gateway as the only explicit public entrypoint from compose.
+    - Kompose-generated Pod resources for application services were replaced with Deployments to improve apply/reconcile behavior on a clean cluster.
+    - No probes were included because no exact probe path/port/exec evidence was provided.
+    - account-api, asset-management-api, notification-api, and transaction-api had no explicit ports in compose; Services were added as placeholders targeting port 8080 to preserve discoverability, but actual container listen ports are unverified.
+    - account-api, asset-management-api, notification-api, and transaction-api Deployments do not declare containerPort because compose did not specify them.
+    - MongoDB compose mount /data/mongo was corrected to /data/db because the original path is likely non-functional for the mongo image.
+    - MySQL compose mount /data/mysql was corrected to /var/lib/mysql because the original path is likely non-functional for the mysql image.
+    - PostgreSQL compose mount /data/postgres was corrected to /var/lib/postgresql/data with PGDATA=/var/lib/postgresql/data/pgdata to avoid lost+found issues on fresh volumes.
+    - Prometheus compose file mount referenced a host file that was unavailable; replaced with a minimal ConfigMap-based prometheus.yml so the workload can start.
+    - Config server compose mount referenced local config-files content that was unavailable; PVC was retained but expected configuration artifacts are unresolved and must be populated externally.
+    - Grafana admin credentials were moved to a standard Secret; values remain placeholders derived from compose and should be rotated.
+    - MySQL and PostgreSQL credentials were moved to standard Secrets; values remain placeholders derived from compose and should be rotated.
+    - Kafka single-node KRaft listener/quorum settings were rewritten to pod-local localhost addressing for controller/quorum consistency in single-pod topology.
+    - notification-api-kafka Service exposes port 9092 only; internal broker listener 29092/controller 29093 remain pod-local and are not exposed separately.
+    - No CRDs or non-standard APIs were introduced.
+    - AWS ALB Ingress annotations were added assuming AWS Load Balancer Controller is installed in the target EKS cluster.
+    - Unresolved artifact issue: application images may rely on config-server-backed external configuration that is not included in these manifests.
+    - Unresolved artifact issue: internal application dependencies and runtime env such as datasource URLs, Kafka bootstrap servers, Redis endpoints, and Eureka settings were not explicitly present in compose and may need additional configuration to become functional.

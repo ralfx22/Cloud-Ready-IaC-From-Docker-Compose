@@ -1,0 +1,63 @@
+```json
+{
+  "k8s": {
+    "namespace": "wger",
+    "services": [
+      {
+        "name": "nginx",
+        "type": "NodePort",
+        "port": 80,
+        "exposed": true
+      },
+      {
+        "name": "web",
+        "type": "ClusterIP",
+        "port": 8000,
+        "exposed": false
+      },
+      {
+        "name": "db",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "cache",
+        "type": "ClusterIP",
+        "port": 6379,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Kompose failed completely because the required './config/prod.env' file was missing. The Kubernetes manifests must be generated manually or by providing a dummy env file. The environment variables from 'prod.env' must be mapped to a Kubernetes Secret or ConfigMap.",
+    "Local configuration files ('./config/nginx.conf' and './config/redis.conf') must be converted into Kubernetes ConfigMaps and mounted into the respective Nginx and Cache pods.",
+    "Memory Sizing & Node Count: web (512 Mi) + nginx (128 Mi) + db (512 Mi) + cache (256 Mi) + celery_worker (512 Mi) + celery_beat (256 Mi) = 2176 Mi total. A t3.small node provides ~1400 Mi allocatable. 2176 Mi / 1400 Mi = 1.55, so 2 nodes are required at minimum.",
+    "Storage Discrepancy (Critical): The 'media' and 'static' volumes are shared across multiple pods (web, nginx, celery_worker). Default AWS EBS volumes are ReadWriteOnce (RWO) and cannot be attached to multiple nodes simultaneously. To resolve this, you must either use AWS EFS (ReadWriteMany) via the EFS CSI driver, or enforce pod affinity so these specific pods schedule on the same node. For a baseline, EBS CSI is assumed, but pod anti-affinity may break the deployment.",
+    "Persistent Data: The 'postgres-data', 'redis-data', and 'celery-beat' volumes require PersistentVolumeClaims (PVCs) backed by the aws-ebs-csi-driver. db and cache should be deployed as StatefulSets.",
+    "Add-ons: Standard EKS managed add-ons (vpc-cni, kube-proxy, coredns) must be provisioned. 'vpc-cni' must be deployed before node groups (before_compute = true). The 'aws-ebs-csi-driver' add-on is required for PVCs.",
+    "Ingress: Expose the 'nginx' service via an AWS Application Load Balancer using the AWS Load Balancer Controller. The ALB will handle internet-facing HTTP traffic (port 80) and route it to the internal Nginx pods. HTTP-only is sufficient for baseline validation."
+  ]
+}
+```

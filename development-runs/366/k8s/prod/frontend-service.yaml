@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: sme-app
+  labels:
+    app: frontend
+    io.kompose.service: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8080"
+      port: 8080
+      targetPort: 80
+  selector:
+    app: frontend

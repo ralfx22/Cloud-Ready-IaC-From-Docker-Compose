@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservice-demo
+data:
+  notes: |
+    - Architecture plan applied: namespace set to microservice-demo, stateless services converted to Deployments with 1 replica, and databases converted to StatefulSets with PVC-backed storage.
+    - Public exposure is limited to api-gateway through a standard networking.k8s.io/v1 Ingress configured for AWS Load Balancer Controller using ingressClassName=alb and internet-facing HTTP-only ALB annotations.
+    - Internal Services remain ClusterIP as required by the plan.
+    - Kompose-generated standalone Pods with restartPolicy Never/OnFailure were replaced by controllers because they are not a stable EKS baseline.
+    - Inter-service address mismatch was corrected to use Kubernetes Service ports from the plan: user:8080, project:8081, task:8082, api:8083. This changes compose-era values that referenced user:50051, project:50052, task:50053, and api:50059.
+    - api-gateway was updated to target api on Service port 8083 instead of container port 50059.
+    - Database passwords and DB_URI values were modeled as Kubernetes Secrets. Non-sensitive settings were moved to a ConfigMap.
+    - No compose secrets were provided separately. Secret manifests were created from compose values so env wiring remains intact.
+    - Existing Kompose PVC intent was preserved for mongodb, mongodb-config, mysqldb, and postgresdb. storageClassName was intentionally omitted to match the plan.
+    - A default PersistentVolume StorageClass must exist in the target cluster or the PVCs will remain Pending. On EKS this typically requires the Amazon EBS CSI driver and a default EBS-backed StorageClass to already be installed.
+    - Volume mounts for MongoDB, MySQL, and PostgreSQL use subPath directories created by init containers so freshly formatted volumes with lost+found at the filesystem root do not break database initialization.
+    - fsGroup=999 was added to database Pods as a baseline writable-volume assumption for non-root database images. If an image uses a different runtime group, adjust fsGroup accordingly.
+    - Compose healthchecks were preserved only for the database containers because exact exec checks were evidenced in the source. No readiness probes or additional probes were added because they were not explicitly evidenced.
+    - depends_on ordering and health semantics from Docker Compose are not enforced by Kubernetes. These manifests do not guarantee startup sequencing beyond controller restarts.
+    - Kompose stderr warnings recorded: docker-compose version field is obsolete; path inspection warnings occurred for /data/db, /data/configdb, /var/lib/mysql, and /var/lib/postgresql/data.
+    - Build/artifact assumption: application images ralfx22/md-user, ralfx22/md-project, ralfx22/md-task, and ralfx22/md-api are assumed to be available from a registry reachable by the cluster. The original local build contexts are not usable directly by Kubernetes. If these images are missing or private, publish accessible images before validation.
+    - Platform assumption: the compose file declared linux/amd64 for project and mysql. The architecture plan uses t3.small EKS nodes, which are amd64-compatible. Validation on non-amd64 clusters may fail for those workloads.
+    - TLS was not configured because the architecture plan explicitly allows HTTP-only baseline validation and no ACM certificate ARN was provided.
+    - AWS Load Balancer Controller must already be installed in the cluster for the Ingress to provision an ALB and populate Ingress status. These manifests do not install the controller.

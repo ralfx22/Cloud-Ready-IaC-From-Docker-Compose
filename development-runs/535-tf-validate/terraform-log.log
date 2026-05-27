@@ -1,0 +1,105 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for eks...
+- eks in .terraform/modules/eks
+- eks.eks_managed_node_group in .terraform/modules/eks/modules/eks-managed-node-group
+- eks.eks_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+- eks.fargate_profile in .terraform/modules/eks/modules/fargate-profile
+Downloading registry.terraform.io/terraform-aws-modules/kms/aws 4.0.0 for eks.kms...
+- eks.kms in .terraform/modules/eks.kms
+- eks.self_managed_node_group in .terraform/modules/eks/modules/self-managed-node-group
+- eks.self_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+- vpc in .terraform/modules/vpc
+Initializing provider plugins...
+- Finding hashicorp/null versions matching ">= 3.0.0"...
+- Finding hashicorp/kubernetes versions matching "~> 2.40"...
+- Finding hashicorp/cloudinit versions matching ">= 2.0.0"...
+- Finding hashicorp/aws versions matching ">= 6.0.0, >= 6.28.0, ~> 6.28"...
+- Finding hashicorp/helm versions matching "~> 2.17"...
+- Finding latest version of hashicorp/http...
+- Finding hashicorp/tls versions matching ">= 4.0.0"...
+- Finding hashicorp/time versions matching ">= 0.9.0"...
+- Installing hashicorp/tls v4.2.1...
+- Installed hashicorp/tls v4.2.1 (signed by HashiCorp)
+- Installing hashicorp/time v0.13.1...
+- Installed hashicorp/time v0.13.1 (signed by HashiCorp)
+- Installing hashicorp/null v3.2.4...
+- Installed hashicorp/null v3.2.4 (signed by HashiCorp)
+- Installing hashicorp/cloudinit v2.3.7...
+- Installed hashicorp/cloudinit v2.3.7 (signed by HashiCorp)
+- Installing hashicorp/aws v6.44.0...
+- Installed hashicorp/aws v6.44.0 (signed by HashiCorp)
+- Installing hashicorp/helm v2.17.0...
+- Installed hashicorp/helm v2.17.0 (signed by HashiCorp)
+- Installing hashicorp/http v3.5.0...
+- Installed hashicorp/http v3.5.0 (signed by HashiCorp)
+
+Error: Failed to query available provider packages
+
+Could not retrieve the list of available versions for provider
+hashicorp/kubernetes: no available releases match the given constraints ~>
+2.40
+
+To see which modules are currently depending on hashicorp/kubernetes and what
+versions are specified, run the following command:
+    terraform providers
+=== terraform validate ===
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/aws, but
+that provider isn't available. You may be able to install it automatically by
+running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider
+registry.terraform.io/hashicorp/cloudinit, but that provider isn't available.
+You may be able to install it automatically by running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/helm,
+but that provider isn't available. You may be able to install it
+automatically by running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/http,
+but that provider isn't available. You may be able to install it
+automatically by running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider
+registry.terraform.io/hashicorp/kubernetes, but that provider isn't
+available. You may be able to install it automatically by running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/null,
+but that provider isn't available. You may be able to install it
+automatically by running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/time,
+but that provider isn't available. You may be able to install it
+automatically by running:
+  terraform init
+
+Error: Missing required provider
+
+This configuration requires provider registry.terraform.io/hashicorp/tls, but
+that provider isn't available. You may be able to install it automatically by
+running:
+  terraform init

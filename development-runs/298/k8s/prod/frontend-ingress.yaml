@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  namespace: sme-app
+  annotations:
+    # No provider-specific ingressClass was provided by the architecture plan. Replace or extend annotations if using a specific controller.
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

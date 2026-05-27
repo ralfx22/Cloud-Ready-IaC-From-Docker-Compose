@@ -1,0 +1,434 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-consul-discovery
+  namespace: bookstore
+  labels:
+    app: bookstore-consul-discovery
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-consul-discovery
+  template:
+    metadata:
+      labels:
+        app: bookstore-consul-discovery
+    spec:
+      containers:
+        - name: bookstore-consul-discovery
+          image: hashicorp/consul
+          ports:
+            - name: http
+              containerPort: 8500
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-consul-discovery
+  namespace: bookstore
+  labels:
+    app: bookstore-consul-discovery
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-consul-discovery
+  ports:
+    - name: http
+      port: 8500
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-zipkin
+  namespace: bookstore
+  labels:
+    app: bookstore-zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-zipkin
+  template:
+    metadata:
+      labels:
+        app: bookstore-zipkin
+    spec:
+      containers:
+        - name: bookstore-zipkin
+          image: openzipkin/zipkin
+          ports:
+            - name: http
+              containerPort: 9411
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-zipkin
+  namespace: bookstore
+  labels:
+    app: bookstore-zipkin
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-zipkin
+  ports:
+    - name: http
+      port: 9411
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-zuul-api-gateway-server
+  namespace: bookstore
+  labels:
+    app: bookstore-zuul-api-gateway-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-zuul-api-gateway-server
+  template:
+    metadata:
+      labels:
+        app: bookstore-zuul-api-gateway-server
+    spec:
+      containers:
+        - name: bookstore-zuul-api-gateway-server
+          image: ralfx22/bsa-api-gateway:latest
+          env:
+            - name: SERVER_PORT
+              value: "8765"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx512m
+          ports:
+            - name: http
+              containerPort: 8765
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-zuul-api-gateway-server
+  namespace: bookstore
+  labels:
+    app: bookstore-zuul-api-gateway-server
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-zuul-api-gateway-server
+  ports:
+    - name: http
+      port: 8765
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+  labels:
+    app: bookstore-account-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-account-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-account-service
+    spec:
+      containers:
+        - name: bookstore-account-service
+          image: ralfx22/bsa-account-service:latest
+          env:
+            - name: SERVER_PORT
+              value: "4001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx512m
+          ports:
+            - name: http
+              containerPort: 4001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+  labels:
+    app: bookstore-account-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-account-service
+  ports:
+    - name: http
+      port: 4001
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-billing-service
+  namespace: bookstore
+  labels:
+    app: bookstore-billing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-billing-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-billing-service
+    spec:
+      containers:
+        - name: bookstore-billing-service
+          image: ralfx22/bsa-billing-service:latest
+          env:
+            - name: SERVER_PORT
+              value: "5001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx512m
+          ports:
+            - name: http
+              containerPort: 5001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-billing-service
+  namespace: bookstore
+  labels:
+    app: bookstore-billing-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-billing-service
+  ports:
+    - name: http
+      port: 5001
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-catalog-service
+  namespace: bookstore
+  labels:
+    app: bookstore-catalog-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-catalog-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-catalog-service
+    spec:
+      containers:
+        - name: bookstore-catalog-service
+          image: ralfx22/bsa-catalog-service:latest
+          env:
+            - name: SERVER_PORT
+              value: "6001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx512m
+          ports:
+            - name: http
+              containerPort: 6001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-catalog-service
+  namespace: bookstore
+  labels:
+    app: bookstore-catalog-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-catalog-service
+  ports:
+    - name: http
+      port: 6001
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-order-service
+  namespace: bookstore
+  labels:
+    app: bookstore-order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-order-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-order-service
+    spec:
+      containers:
+        - name: bookstore-order-service
+          image: ralfx22/bsa-order-service:latest
+          env:
+            - name: SERVER_PORT
+              value: "7001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx512m
+          ports:
+            - name: http
+              containerPort: 7001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-order-service
+  namespace: bookstore
+  labels:
+    app: bookstore-order-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-order-service
+  ports:
+    - name: http
+      port: 7001
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-payment-service
+  namespace: bookstore
+  labels:
+    app: bookstore-payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-payment-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-payment-service
+    spec:
+      containers:
+        - name: bookstore-payment-service
+          image: ralfx22/bsa-payment-service:latest
+          env:
+            - name: SERVER_PORT
+              value: "8001"
+            - name: ZIPKIN_HOST
+              value: bookstore-zipkin:9411
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: JAVA_TOOL_OPTIONS
+              value: -Xmx512m
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-payment-service
+  namespace: bookstore
+  labels:
+    app: bookstore-payment-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-payment-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+  labels:
+    app: bookstore-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-frontend
+  template:
+    metadata:
+      labels:
+        app: bookstore-frontend
+    spec:
+      containers:
+        - name: bookstore-frontend
+          image: ralfx22/bsa-frontend:latest
+          env:
+            - name: BACKEND_API_GATEWAY_URL
+              value: http://bookstore-zuul-api-gateway-server:8765
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+  labels:
+    app: bookstore-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: bookstore-frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cache
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: cache
+    app.kubernetes.io/part-of: wger
+spec:
+  serviceName: cache-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cache
+      app.kubernetes.io/part-of: wger
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cache
+        app.kubernetes.io/part-of: wger
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: cache
+          image: docker.io/redis:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - redis-server
+            - /usr/local/etc/redis/redis.conf
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: redis-config
+              mountPath: /usr/local/etc/redis/redis.conf
+              subPath: redis.conf
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data

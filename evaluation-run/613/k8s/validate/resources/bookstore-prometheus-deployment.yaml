@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-prometheus
+  namespace: bookstore
+  labels:
+    app: bookstore-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-prometheus
+  template:
+    metadata:
+      labels:
+        app: bookstore-prometheus
+    spec:
+      containers:
+        - name: bookstore-prometheus
+          image: ralfx22/bsa-prometheus:latest
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+          resources:
+            requests:
+              memory: "256Mi"
+            limits:
+              memory: "256Mi"
+      restartPolicy: Always

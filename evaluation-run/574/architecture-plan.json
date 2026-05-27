@@ -1,0 +1,118 @@
+
+
+```json
+{
+  "k8s": {
+    "namespace": "wger",
+    "services": [
+      {
+        "name": "web",
+        "type": "ClusterIP",
+        "port": 8000,
+        "exposed": false
+      },
+      {
+        "name": "nginx",
+        "type": "ClusterIP",
+        "port": 80,
+        "exposed": true
+      },
+      {
+        "name": "db",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "cache",
+        "type": "ClusterIP",
+        "port": 6379,
+        "exposed": false
+      },
+      {
+        "name": "celery-worker",
+        "type": "ClusterIP",
+        "port": null,
+        "exposed": false
+      },
+      {
+        "name": "celery-beat",
+        "type": "ClusterIP",
+        "port": null,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 3,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.101.0/24", "10.0.102.0/24"],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "=== Kompose failure ===",
+    "Kompose failed entirely because the referenced env_file ./config/prod.env does not exist. No K8s manifests were generated. All manifests must be hand-crafted in Terraform from Compose intent.",
+
+    "=== Environment / Secrets ===",
+    "web, celery_worker, and celery_beat reference ./config/prod.env (env_file). Since this file does not exist, a placeholder Kubernetes Secret named 'wger-prod-env' will be created with documented keys the user must fill in (DATABASE_URL, CACHE_URL, SECRET_KEY, etc.). The Compose db service sets POSTGRES_USER=wger, POSTGRES_PASSWORD=wger, POSTGRES_DB=wger — these will go into a Secret named 'db-credentials'.",
+
+    "=== Config files (ConfigMap) ===",
+    "nginx: ./config/nginx.conf is a bind-mount to /etc/nginx/conf.d/default.conf — this is config, not data. A ConfigMap 'nginx-config' will be created with a placeholder nginx.conf the user must supply. Mounted as a subPath volume into the nginx Deployment.",
+    "cache: ./config/redis.conf is a bind-mount to /usr/local/etc/redis/redis.conf — config file. A ConfigMap 'redis-config' will be created with a placeholder redis.conf. Mounted as a subPath volume into the cache Deployment.",
+
+    "=== Storage classification ===",
+    "postgres-data -> /var/lib/postgresql/data/ : persistent data, PVC required, StatefulSet for db.",
+    "redis-data -> /data : persistent data (Redis AOF/RDB), PVC required, StatefulSet for cache.",
+    "celery-beat -> /home/wger/beat/ : persistent schedule data, PVC required, StatefulSet for celery-beat.",
+    "media -> /home/wger/media : persistent user-uploaded media, shared between web and celery_worker. A single PVC with ReadWriteMany (or shared via a common RWO strategy if single-node) is needed. Since EBS only supports RWO, and both web and celery_worker need this volume, they will be co-located or an EFS-backed PVC can be used. For baseline: use a single RWO PVC and ensure web and celery_worker pods are scheduled on the same node via podAffinity, OR use EFS. Plan: use EBS RWO with pod affinity as simplest baseline; note EFS as upgrade path.",
+    "static -> /home/wger/static : shared between web (read-write, generates static files) and nginx (read-only, serves them). Same RWO sharing constraint as media. Plan: use an initContainer in the nginx Deployment that copies static files, or share via pod affinity + RWO PVC. Simplest baseline: co-locate web and nginx in the same pod (sidecar pattern) sharing emptyDir for static, with a separate PVC for media. Alternative: run web collectstatic as init container in nginx pod. Decision: deploy web and nginx as separate Deployments; use an init container in the nginx Deployment that copies static files from the wger/server image. For media, use a single RWO PVC shared between web and celery_worker Deployments with pod affinity.",
+
+    "=== Workload types ===",
+    "web: Deployment (stateless app server; media PVC mounted).",
+    "nginx: Deployment (stateless reverse proxy; static served via init container copy to emptyDir; media PVC mounted read-only, co-located with web via affinity).",
+    "db: StatefulSet (postgres-data PVC, 1 replica).",
+    "cache: StatefulSet (redis-data PVC, 1 replica).",
+    "celery_worker: Deployment (shares media PVC with web, custom command /start-worker).",
+    "celery_beat: StatefulSet (celery-beat PVC for schedule state, custom command /start-beat, 1 replica — must be singleton).",
+
+    "=== Node sizing math ===",
+    "Per-node allocatable memory: 1.4 GiB = ~1434 Mi.",
+    "Service memory estimates: web (Django/gunicorn) ~512 Mi, nginx ~128 Mi, db (PostgreSQL) ~512 Mi, cache (Redis) ~256 Mi, celery_worker ~384 Mi, celery_beat ~256 Mi.",
+    "Total estimated pod memory: 512 + 128 + 512 + 256 + 384 + 256 = 2048 Mi.",
+    "Nodes needed for memory: 2048 / 1434 ≈ 1.43, so minimum 2 nodes. Adding 1 node for headroom, scheduling flexibility, and EKS system pods (coredns runs 2 replicas ~170 Mi each) → total system overhead ~340 Mi → grand total ~2388 Mi → 2388/1434 = 1.67 → 2 nodes minimum. Using 3 nodes for AZ spread and scheduling comfort.",
+    "desired_node_count: 3.",
+
+    "=== EKS add-ons ===",
+    "Mandatory: vpc-cni (before_compute=true), kube-proxy, coredns.",
+    "Trigger-based: aws-ebs-csi-driver required because db, cache, celery-beat, and media volumes need PVCs backed by EBS. IRSA role for EBS CSI driver is required.",
+    "A default gp3 StorageClass will be created and set as default to prevent PVCs from staying Pending.",
+
+    "=== Ingress ===",
+    "AWS Load Balancer Controller deployed via Helm with IRSA. An Ingress resource targeting the nginx service on port 80 will provision an internet-facing ALB. HTTP-only is sufficient for baseline validation; no ACM certificate required. Public subnets tagged with kubernetes.io/role/elb=1 for ALB subnet auto-discovery. Private subnets tagged with kubernetes.io/role/internal-elb=1.",
+
+    "=== Networking ===",
+    "Nodes in private subnets; NAT gateway required for outbound image pulls. 2 AZs with 2 public + 2 private subnets.",
+
+    "=== Discrepancies ===",
+    "nginx Compose uses ports: 80:80 (host-mapped). In K8s this becomes a ClusterIP service exposed externally via ALB Ingress, not NodePort/hostPort.",
+    "Compose logging driver json-file with rotation is Docker-specific; not carried to K8s (kubelet handles log rotation).",
+    "Compose restart: unless-stopped maps to restartPolicy: Always in K8s (default), no action needed.",
+    "Compose healthchecks will be translated to K8s liveness/readiness probes in the manifests."
+  ]
+}
+```

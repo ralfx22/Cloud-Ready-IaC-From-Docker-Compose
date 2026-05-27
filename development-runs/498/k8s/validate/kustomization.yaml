@@ -1,0 +1,8 @@
+namespace: ns-498
+resources:
+  - resources/configmaps.yaml
+  - resources/ingress.yaml
+  - resources/secrets.yaml
+  - resources/services.yaml
+  - resources/storage.yaml
+  - resources/workloads.yaml

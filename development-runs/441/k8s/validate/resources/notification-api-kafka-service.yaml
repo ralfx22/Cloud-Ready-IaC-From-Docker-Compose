@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-api-kafka
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: notification-api-kafka
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: notification-api-kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092

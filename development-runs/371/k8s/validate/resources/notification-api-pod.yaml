@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: notification-api
+  namespace: microservices
+  labels:
+    io.kompose.service: notification-api
+spec:
+  containers:
+    - env:
+        - name: spring.cloud.config.uri
+          value: http://config-server:8888/config-server
+        - name: spring.profiles.active
+          value: docker
+      image: 0145136798/notification-api
+      name: notification-api
+  restartPolicy: OnFailure

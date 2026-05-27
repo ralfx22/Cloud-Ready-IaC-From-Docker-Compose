@@ -1,0 +1,8 @@
+namespace: ns-454
+resources:
+  - resources/ingress.yaml
+  - resources/migration-notes.yaml
+  - resources/persistentvolumeclaims.yaml
+  - resources/secrets.yaml
+  - resources/services.yaml
+  - resources/workloads.yaml

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotes
+  namespace: sme-app
+  labels:
+    app: quotes
+    io.kompose.service: quotes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: quotes
+  template:
+    metadata:
+      labels:
+        io.kompose.service: quotes
+    spec:
+      containers:
+        - name: quotes
+          image: ralfx22/sme-quotes:latest
+          ports:
+            - containerPort: 5000

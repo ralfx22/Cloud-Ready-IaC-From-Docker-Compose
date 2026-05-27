@@ -1,0 +1,21 @@
+namespace: ns-574
+resources:
+  - resources/configmap-nginx-config.yaml
+  - resources/configmap-redis-config.yaml
+  - resources/deployment-celery-worker.yaml
+  - resources/deployment-nginx.yaml
+  - resources/deployment-web.yaml
+  - resources/ingress-nginx.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/pvc-media.yaml
+  - resources/secret-db-credentials.yaml
+  - resources/secret-wger-prod-env.yaml
+  - resources/service-cache.yaml
+  - resources/service-celery-beat.yaml
+  - resources/service-db.yaml
+  - resources/service-nginx.yaml
+  - resources/service-web.yaml
+  - resources/statefulset-cache.yaml
+  - resources/statefulset-celery-beat.yaml
+  - resources/statefulset-db.yaml

@@ -1,0 +1,49 @@
+[33mWARN[0m /data/shared/551/docker-compose.yml: `version` is obsolete 
+[33mWARN[0m Service "account-api" won't be created because 'ports' is not specified 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat /data/shared/551/data/account-api-mongo: no such file or directory 
+[33mWARN[0m Volume mount on the host "/data/shared/551/data/account-api-mongo" isn't supported - ignoring path on the host 
+[33mWARN[0m Service "asset-management-api" won't be created because 'ports' is not specified 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat /data/shared/551/data/asset-management-api-mysql: no such file or directory 
+[33mWARN[0m Volume mount on the host "/data/shared/551/data/asset-management-api-mysql" isn't supported - ignoring path on the host 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat /data/shared/551/config-files: no such file or directory 
+[33mWARN[0m Volume mount on the host "/data/shared/551/config-files" isn't supported - ignoring path on the host 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat /data/shared/551/data/grafana: no such file or directory 
+[33mWARN[0m Volume mount on the host "/data/shared/551/data/grafana" isn't supported - ignoring path on the host 
+[33mWARN[0m Service "notification-api" won't be created because 'ports' is not specified 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat /data/shared/551/prometheus-configuration.yml: no such file or directory 
+[33mWARN[0m Volume mount on the host "/data/shared/551/prometheus-configuration.yml" isn't supported - ignoring path on the host 
+[33mWARN[0m Service "transaction-api" won't be created because 'ports' is not specified 
+[33mWARN[0m File don't exist or failed to check if the directory is empty: stat /data/shared/551/data/transaction-api-postgres: no such file or directory 
+[33mWARN[0m Volume mount on the host "/data/shared/551/data/transaction-api-postgres" isn't supported - ignoring path on the host 
+[36mINFO[0m Kubernetes file "kompose/account-api-mongo-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/api-gateway-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/asset-management-api-mysql-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/config-server-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/discovery-server-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/grafana-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/notification-api-kafka-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/prometheus-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/redis-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/transaction-api-postgres-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/zipkin-service.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/account-api-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/account-api-mongo-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/account-api-mongo-claim0-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/api-gateway-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/asset-management-api-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/asset-management-api-mysql-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/asset-management-api-mysql-claim0-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/config-server-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/config-server-claim0-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/discovery-server-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/grafana-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/grafana-claim0-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/notification-api-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/notification-api-kafka-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/prometheus-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/prometheus-claim0-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/redis-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/transaction-api-pod.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/transaction-api-postgres-deployment.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/transaction-api-postgres-claim0-persistentvolumeclaim.yaml" created 
+[36mINFO[0m Kubernetes file "kompose/zipkin-deployment.yaml" created 

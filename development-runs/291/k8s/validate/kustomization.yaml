@@ -1,0 +1,9 @@
+namespace: ns-291
+resources:
+  - resources/10-quotes-deployment.yaml
+  - resources/11-api-deployment.yaml
+  - resources/12-frontend-deployment.yaml
+  - resources/20-quotes-service.yaml
+  - resources/21-api-service.yaml
+  - resources/22-frontend-service.yaml
+  - resources/50-ingress.yaml

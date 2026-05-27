@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: bookstore
+  labels:
+    app: migration-notes
+data:
+  notes: |
+    === Bookstore Docker-Compose to EKS Migration Notes ===
+
+    1. NAMESPACE: All resources placed in 'bookstore' namespace per architecture plan.
+
+    2. MYSQL CREDENTIALS: MYSQL_PASSWORD and MYSQL_ROOT_PASSWORD moved from plain-text
+       env vars to a Kubernetes Secret (bookstore-mysql-credentials) referenced via
+       secretKeyRef. The Secret contains placeholder values from the original Compose
+       file. Replace with production-grade credentials before production use.
+
+    3. MYSQL DUPLICATE PORTS: Kompose generated duplicate port entries (ports + expose
+       both mapping to 3306) on the bookstore-mysql-db Service. Deduplicated to a
+       single port entry.
+
+    4. MYSQL LOST+FOUND: An initContainer was added to the MySQL Deployment to remove
+       the lost+found directory that appears on freshly formatted EBS volumes. Without
+       this, MySQL fails to initialize its data directory.
+
+    5. GRAFANA FSGOUP: Added securityContext.fsGroup=472 to the Grafana pod spec.
+       The Grafana container runs as UID 472 (grafana). Without fsGroup, the PVC mount
+       at /var/lib/grafana would not be writable by the container process.
+
+    6. GRAFANA SERVICE PORT: Changed from Kompose's 3030 (host port mapping from
+       Compose) to 3000 (actual container port) to match the architecture plan.
+
+    7. FRONTEND SERVICE PORT: Changed from Kompose's port 3000 (Compose host port
+       mapping) to port 80 (container port) to match the architecture plan.
+
+    8. FRONTEND BACKEND_API_GATEWAY_URL: Updated from http://localhost:8765 to
+       http://bookstore-zuul-api-gateway-server:8765 for in-cluster service
+       discovery. WARNING: If the frontend is a React SPA making browser-side
+       API calls, this URL will not be reachable from the user's browser.
+       In that case, the API gateway should also be exposed via the ALB Ingress
+       (e.g., path-based routing /api/* -> gateway). This requires application-level
+       understanding and is noted as an open item.
+
+    9. FRONTEND INGRESS: An ALB Ingress is created for bookstore-frontend on port 80
+       (HTTP only). The AWS Load Balancer Controller must be installed on the EKS
+       cluster for the ALB to be provisioned. No TLS/ACM certificate is configured
+       for baseline validation.
+
+    10. TELEGRAF DOCKER.SOCK: The Compose bind-mount of /var/run/docker.sock was
+        skipped by Kompose (host Docker socket is not available in Kubernetes).
+        Telegraf will need reconfiguration for container metrics collection in K8s
+        (e.g., using the Kubernetes input plugin). No PVC was created for telegraf
+        as the only volume was the docker.sock bind mount.
+
+    11. CONSUL SINGLE-NODE: Consul is deployed as a single-node server with
+        -bind=127.0.0.1 since it runs as a single pod (no multi-node quorum).
+        The -bootstrap-expect=1 flag enables single-node bootstrap. For production,
+        consider a multi-node Consul cluster.
+
+    12. PROBES OMITTED: No liveness/readiness probes were added because there is no
+        explicit evidence of health-check endpoints (port+path) for the application
+        services. Adding probes is recommended once health endpoints are confirmed.
+
+    13. STORAGE: PVCs retained for bookstore-mysql-db, bookstore-grafana,
+        bookstore-influxdb, and bookstore-chronograf. No storageClassName is set;
+        a default gp3 StorageClass should be provisioned (via Terraform/EBS CSI
+        driver) for dynamic provisioning to work. PVC sizes increased from Kompose
+        default 100Mi to more realistic values (1Gi for databases, 500Mi for others).
+
+    14. VOLUME NAME TYPOS: Original Compose had typos in volume names
+        (booksture-influxdb-volume, booksture-chronograf-volume). These names were
+        preserved in PVC names for consistency with Kompose output and volume mount
+        references.
+
+    15. UNUSED COMPOSE VOLUME: booksture-telegraph-volume was declared in Compose
+        but never mounted by any service. No PVC was created for it.
+
+    16. HOSTNAME FIELDS: Removed 'hostname' fields from pod specs. In Kubernetes,
+        pod hostname is set automatically and the Compose hostname served for
+        Docker DNS which is replaced by Kubernetes Services.
+
+    17. RESOURCE REQUESTS: Memory requests and limits set per architecture plan
+        estimates. No CPU requests/limits set; add based on observed usage.
+
+    18. ALL SERVICES CLUSTERIP: All Kubernetes Services are ClusterIP. Only
+        bookstore-frontend is externally accessible via ALB Ingress.
+
+    19. KOMPOSE ANNOTATIONS: Removed kompose.cmd and kompose.version annotations
+        from all resources for cleanliness.
+
+    20. EBS CSI DRIVER: Required for PVC dynamic provisioning on EKS. Must be
+        installed as an EKS add-on with appropriate IRSA IAM role.
+
+    21. AWS LOAD BALANCER CONTROLLER: Required for ALB Ingress to function.
+        Must be installed on the EKS cluster with appropriate IRSA IAM role.

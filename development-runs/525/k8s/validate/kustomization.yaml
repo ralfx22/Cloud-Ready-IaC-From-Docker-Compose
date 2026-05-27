@@ -1,0 +1,6 @@
+namespace: ns-525
+resources:
+  - resources/00-namespace.yaml
+  - resources/10-apps.yaml
+  - resources/20-frontend-ingress.yaml
+  - resources/30-migration-notes.yaml

@@ -1,0 +1,4 @@
+namespace: ns-507
+resources:
+  - resources/manifests.yaml
+  - resources/migration-notes.yaml

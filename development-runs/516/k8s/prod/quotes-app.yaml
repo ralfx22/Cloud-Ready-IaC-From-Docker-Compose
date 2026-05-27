@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: quotes-app
+  labels:
+    app.kubernetes.io/name: quotes-app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/part-of: quotes-app
+data:
+  QUOTES_API: http://quotes:5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/part-of: quotes-app
+    spec:
+      containers:
+        - name: api
+          image: example.com/quotes-app/api:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: QUOTES_API
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: QUOTES_API
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/part-of: quotes-app
+    spec:
+      containers:
+        - name: frontend
+          image: example.com/quotes-app/frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotes
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: quotes
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: quotes
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: quotes
+        app.kubernetes.io/part-of: quotes-app
+    spec:
+      containers:
+        - name: quotes
+          image: example.com/quotes-app/quotes:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quotes
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: quotes
+    app.kubernetes.io/part-of: quotes-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: quotes
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: quotes-app
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: quotes-app
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 8080

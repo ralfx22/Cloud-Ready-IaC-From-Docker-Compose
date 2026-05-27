@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api
+  namespace: rrb-app
+  labels:
+    app: asset-management-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-management-api
+  template:
+    metadata:
+      labels:
+        app: asset-management-api
+    spec:
+      containers:
+        - name: asset-management-api
+          image: ralfx22/rrb-asset-management-api
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+      restartPolicy: Always

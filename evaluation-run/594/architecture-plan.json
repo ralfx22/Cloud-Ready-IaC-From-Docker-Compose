@@ -1,0 +1,96 @@
+
+
+```json
+{
+  "k8s": {
+    "namespace": "microservice-demo",
+    "services": [
+      {
+        "name": "user",
+        "type": "Deployment",
+        "port": 50051,
+        "exposed": false
+      },
+      {
+        "name": "project",
+        "type": "Deployment",
+        "port": 50052,
+        "exposed": false
+      },
+      {
+        "name": "task",
+        "type": "Deployment",
+        "port": 50053,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "Deployment",
+        "port": 50059,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "Deployment",
+        "port": 9090,
+        "exposed": true
+      },
+      {
+        "name": "postgresql",
+        "type": "StatefulSet",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "mysql",
+        "type": "StatefulSet",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "mongo",
+        "type": "StatefulSet",
+        "port": 27017,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 4,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.3.0/24", "10.0.4.0/24"],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Memory estimates per service: postgresql ~512Mi, mysql ~512Mi, mongo ~512Mi, user ~256Mi, project ~256Mi, task ~256Mi, api ~256Mi, api-gateway ~256Mi. Total estimated pod memory: ~2816Mi (~2.75 GiB).",
+    "Node sizing: t3.small has ~1.4 GiB allocatable. 4 nodes provide ~5.6 GiB allocatable, comfortably exceeding ~2.75 GiB total pod requests. 8 pods across 4 nodes is well within per-node pod limits.",
+    "Kompose generated bare Pods instead of Deployments/StatefulSets. Plan converts all application services (user, project, task, api, api-gateway) to Deployments and all database services (postgresql, mysql, mongo) to StatefulSets for proper lifecycle management and restart behavior.",
+    "Kompose Service port discrepancy: K8s services for user (8080->50051), project (8081->50052), task (8082->50053), api (8083->50059) use host-side ports as service ports. Plan will normalize service ports to match container ports so internal gRPC references (e.g., user:50051, project:50052, task:50053, api:50059 in env vars) resolve correctly.",
+    "api-gateway is the external HTTP entrypoint (port 9090, proxy mode). An ALB Ingress will be created pointing to api-gateway:9090 for end-to-end validation. HTTP-only is sufficient for baseline; no TLS/ACM certificate required.",
+    "PVCs for persistent data: postgresdb (/var/lib/postgresql/data), mysqldb (/var/lib/mysql), mongodb (/data/db), mongodb-config (/data/configdb). All are legitimate persistent runtime data directories. PostgreSQL PVC mountPath should use /var/lib/postgresql/data (Kompose stripped trailing slash, which is fine). StatefulSets will use volumeClaimTemplates instead of standalone PVCs.",
+    "EBS CSI driver add-on required for PVC provisioning. A gp3 default StorageClass will be created to ensure PVCs do not remain Pending.",
+    "Standard EKS managed add-ons: vpc-cni (before_compute=true), kube-proxy, coredns.",
+    "AWS Load Balancer Controller add-on required for ALB Ingress. IRSA will provide least-privilege IAM access. Public subnets tagged with kubernetes.io/role/elb=1 and private subnets tagged with kubernetes.io/role/internal-elb=1 for ALB subnet discovery.",
+    "Database credentials (MYSQL_ROOT_PASSWORD, POSTGRES_PASSWORD, DB_URI values containing passwords) are currently plain-text env vars. Ideally these should be Kubernetes Secrets; plan will create Secrets for database credentials and reference them via secretKeyRef in Deployments/StatefulSets.",
+    "Kompose warnings about non-existent volume directories are expected and harmless; named volumes in Compose become PVCs in K8s.",
+    "Kompose liveness probe for postgresql has a bug: the command is a single string 'pg_isready -U postgres -d microservice-task' instead of split args. This must be fixed in the final manifests to use [sh, -c, 'pg_isready -U postgres -d microservice-task'] or split into individual args.",
+    "Nodes will run in private subnets; NAT gateway required for pulling container images and EKS API communication.",
+    "No HPA, autoscaler, service mesh, or observability stack planned; not required by the manifests."
+  ]
+}
+```

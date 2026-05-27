@@ -1,0 +1,10 @@
+namespace: ns-354
+resources:
+  - resources/api-deployment.yaml
+  - resources/api-service.yaml
+  - resources/frontend-deployment.yaml
+  - resources/frontend-service.yaml
+  - resources/ingress-frontend.yaml
+  - resources/migration-notes.yaml
+  - resources/quotes-deployment.yaml
+  - resources/quotes-service.yaml

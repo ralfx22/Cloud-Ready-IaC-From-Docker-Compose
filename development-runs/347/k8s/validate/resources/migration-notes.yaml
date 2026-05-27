@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    Migration notes and assumptions captured during conversion:
+
+    - Namespace: all resources placed into namespace 'sme-app' per architecture plan.
+
+    - Ingress: An AWS ALB-backed Ingress is created (ingressClassName: alb) to expose the frontend
+      service on HTTP (internet-facing). This relies on the AWS Load Balancer Controller being
+      installed in the cluster with appropriate IAM permissions (IRSA) to provision ALBs.
+      The Ingress is HTTP-only per plan (no ACM certificate configured).
+
+    - Services:
+      * frontend: ClusterIP service created (port 8080 -> targetPort 80) to match Kompose output
+        and the architecture plan. ALB Ingress routes to this service port.
+      * api: ClusterIP service created (port 3000 -> targetPort 3000) to match Kompose output.
+      * quotes: ClusterIP service added (port 5000 -> targetPort 5000). Kompose did not create
+        a service for 'quotes' because no ports were defined in the compose file; the service
+        is required so the 'api' deployment can resolve 'quotes:5000' as per the API's
+        QUOTES_API environment variable.
+
+    - Container ports:
+      * api containerPort: 3000 (from Kompose manifest)
+      * frontend containerPort: 80 (from Kompose manifest)
+      * quotes containerPort: 5000 (inferred from QUOTES_API in api environment)
+
+    - Probes: All liveness/readiness/startup probes were omitted because no explicit probe
+      configuration (exact port/path/exec) was provided in the source manifests.
+
+    - Storage: No PVCs or volumes were detected in the source manifests. No PVCs were added.
+
+    - Images: Images reference Docker Hub (ralfx22/*:latest). Nodes require internet access to
+      pull these images (public subnets or NAT). The architecture plan opts for public nodes to
+      avoid NAT gateway costs.
+
+    - Kompose warnings observed:
+      * WARN: `version` is obsolete in docker-compose file. (Informational.)
+      * WARN: Service "quotes" won't be created because 'ports' is not specified — reconciled
+        by adding a ClusterIP service for quotes on port 5000.
+
+    - Assumptions and risks:
+      * The quotes service port (5000) is inferred from the QUOTES_API environment variable.
+        If the application actually listens on a different port, update the deployment and
+        service accordingly.
+      * The frontend Service port is 8080 (ClusterIP). The ALB routes HTTP to that service
+        port, differing from docker-compose host port mapping but providing a single external
+        HTTP entrypoint for validation.
+
+    - Required cluster components for full functionality (not included here):
+      * AWS Load Balancer Controller (to provision ALB from the Ingress). This requires
+        cluster-level setup (IRSA/IAM role, controller installation).
+
+    End of migration notes.

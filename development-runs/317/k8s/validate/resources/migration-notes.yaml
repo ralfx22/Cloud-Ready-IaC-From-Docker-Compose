@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |
+    High-level design decisions:
+     - A dedicated non-default namespace 'sme-app' will be used for the application.
+     - Managed EKS cluster (version 1.32) with a single managed node group (2 x t3.medium) as a minimal baseline to run the three Deployments.
+     - Mandatory EKS add-ons will be enabled (vpc-cni, kube-proxy, coredns) to ensure cluster networking and core components become healthy.
+     - To provide an externally reachable entrypoint for smoke tests, an ALB-backed Ingress (AWS Load Balancer Controller) will be provisioned and configured to route HTTP traffic to the frontend service. This requires installing the AWS Load Balancer Controller and creating an IAM role via OIDC/IRSA for the controller.
+     - IRSA/OIDC will be created so controllers (ALB controller) can get IAM permissions without node IAM keys.
+     - No PVCs, HPAs, cert-manager, ExternalDNS, or other controllers are added because the manifests show none of those requirements.
+
+    Decisions made to reconcile Compose vs Kompose output:
+     - The original docker-compose exposed ports for api (3000) and frontend (8080 -> container 80). Kompose created Services for api and frontend as ClusterIP services (internal). The Compose intent suggested external accessibility for those ports. To satisfy the requirement to expose at least one externally reachable endpoint, we expose 'frontend' externally via an ALB Ingress. The 'api' Service remains ClusterIP (internal).
+     - The 'quotes' service in docker-compose had no ports declared. Kompose did not create a Service for quotes and only created a Deployment. However, the api container's environment points to http://quotes:5000 indicating the application expects cluster DNS-based service resolution for quotes on port 5000. To restore intended in-cluster service discovery, a ClusterIP Service for 'quotes' on port 5000 was created.
+
+    Kompose warnings / important conversion notes:
+     - Kompose warning: 'version' is obsolete in docker-compose (informational).
+     - Kompose warning: Service 'quotes' won't be created because 'ports' is not specified. Result: only a Deployment for quotes was produced.
+     - Kompose produced ClusterIP Services for 'api' and 'frontend' and Deployments for all three services, each with replicas: 1.
+
+    Gaps and recommended follow-ups:
+     - Health/readiness/liveness probes are not present in the generated Deployments. Add them to enable reliable pod lifecycle and ALB target registration.
+     - The frontend Service created by Kompose uses service port 8080 -> targetPort 80. The ALB Ingress will route on HTTP/80 (or 443 if TLS added) to that service. Confirm desired external port and TLS requirements (cert-manager + ACM) if HTTPS is needed.
+     - Image pull/auth: images are public (ralfx22/*). If images are in a private registry, add imagePullSecrets and corresponding IAM/credentials.
+     - IAM for the ALB controller and appropriate security group configuration will be required (IRSA + permissions + ALB SG rules).
+     - If you prefer the API to be externally reachable (Compose mapped 3000:3000), consider exposing the 'api' Service via Ingress or LoadBalancer as well — currently kept internal per conservative baseline.
+
+    Minimal resources added beyond Kompose output to ensure a working baseline on EKS:
+     - Created ClusterIP Service for 'quotes' (port 5000) to satisfy in-cluster DNS resolution used by api.
+     - Added an ALB Ingress resource mapping '/' to the 'frontend' service to provide an external entrypoint for validation (requires AWS Load Balancer Controller).
+     - Created namespace 'sme-app' and small serviceAccount 'default-sa-sme-app' which can be later bound to IRSA roles if needed.
+
+    Kompose stderr:
+     - WARN: /data/shared/docker-compose-317.yml: `version` is obsolete
+     - WARN: Service "quotes" won't be created because 'ports' is not specified

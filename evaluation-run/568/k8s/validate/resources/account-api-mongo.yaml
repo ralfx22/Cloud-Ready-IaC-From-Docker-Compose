@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api-mongo
+  namespace: rrb-microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-api-mongo
+  template:
+    metadata:
+      labels:
+        app: account-api-mongo
+    spec:
+      containers:
+        - name: account-api-mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+              subPath: db
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: account-api-mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-api-mongo
+  namespace: rrb-microservices
+spec:
+  type: ClusterIP
+  ports:
+    - name: "27017"
+      port: 27017
+      targetPort: 27017
+  selector:
+    app: account-api-mongo

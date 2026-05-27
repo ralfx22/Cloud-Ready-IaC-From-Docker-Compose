@@ -1,0 +1,8 @@
+namespace: ns-277
+resources:
+  - resources/10-quotes-service.yaml
+  - resources/11-quotes-deployment.yaml
+  - resources/20-api-service.yaml
+  - resources/21-api-deployment.yaml
+  - resources/30-frontend-service.yaml
+  - resources/31-frontend-deployment.yaml

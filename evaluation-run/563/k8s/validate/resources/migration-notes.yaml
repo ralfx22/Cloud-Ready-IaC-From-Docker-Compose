@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    Migration Notes - Docker Compose to Kubernetes (EKS)
+    ====================================================
+
+    1. BARE PODS CONVERTED TO DEPLOYMENTS:
+       - account-api, api-gateway, asset-management-api, discovery-server,
+         notification-api, transaction-api were generated as bare Pods by Kompose
+         (due to restart: on-failure or missing ports). All converted to Deployments
+         with matching ClusterIP Services for DNS discoverability.
+
+    2. MISSING PORTS ADDED:
+       - account-api, asset-management-api, notification-api, transaction-api had
+         no 'ports' in Compose. Port 8080 assumed (standard Spring Boot).
+
+    3. MOUNT PATH CORRECTIONS:
+       - account-api-mongo: /data/mongo -> /data/db (standard MongoDB data dir)
+       - asset-management-api-mysql: /data/mysql -> /var/lib/mysql (standard MySQL data dir)
+       - transaction-api-postgres: /data/postgres -> /var/lib/postgresql/data (standard PostgreSQL data dir)
+         PGDATA env var set to /var/lib/postgresql/data/pgdata to avoid lost+found conflict on EBS.
+
+    4. PVC REPLACED WITH CONFIGMAP:
+       - config-server-claim0 PVC removed. Replaced with ConfigMap (config-server-files)
+         mounted at /app/resources/config-files. ConfigMap is empty placeholder;
+         populate with actual Spring Cloud Config backing files before production use.
+       - prometheus-claim0 PVC removed. Replaced with ConfigMap (prometheus-config)
+         with placeholder prometheus.yml. Update scrape targets for actual service endpoints.
+
+    5. SECRETS:
+       - MySQL credentials (MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD)
+         moved from inline env vars to Secret 'mysql-secrets'.
+       - PostgreSQL credentials (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+         moved from inline env vars to Secret 'postgres-secrets'.
+       - Grafana admin credentials moved to Secret 'grafana-secrets'.
+       - NOTE: Secrets use stringData (base64 encoded at apply time). For production,
+         use a proper secrets management solution.
+
+    6. KAFKA NETWORKING:
+       - KAFKA_CONTROLLER_QUORUM_VOTERS changed from 1@notification-api-kafka:29093
+         to 1@localhost:29093 because broker and controller run in the same pod.
+       - KAFKA_LISTENERS changed to bind on 0.0.0.0 for all listeners so they work
+         correctly inside the pod network.
+       - KAFKA_ADVERTISED_LISTENERS HOST listener changed from localhost:9092 to
+         notification-api-kafka:9092 for in-cluster access.
+       - Service exposes both port 9092 and 29092 for client access.
+
+    7. DUPLICATE SERVICE PORTS:
+       - All services had duplicate port entries (e.g., port 27017 listed twice
+         with different names). Deduplicated to single port entries.
+
+    8. INGRESS:
+       - ALB Ingress created for api-gateway (the only exposed service).
+       - HTTP-only (port 80) with internet-facing scheme.
+       - Healthcheck path set to /actuator/health (Spring Boot convention).
+       - Requires AWS Load Balancer Controller to be installed on the cluster.
+       - No TLS/ACM certificate configured for baseline validation.
+
+    9. PROBES:
+       - All probes omitted. No exact port+path or exec commands were evidenced
+         in the Compose file. Spring Boot services likely support /actuator/health
+         but this is not confirmed. Add probes after validation.
+
+    10. STORAGE:
+        - PVCs created without storageClassName (will use cluster default).
+        - EBS CSI driver add-on required on EKS for dynamic provisioning.
+        - PVC sizes set to 1Gi (increase as needed for production).
+
+    11. SECURITY CONTEXT:
+        - fsGroup: 472 added for Grafana (runs as user grafana, gid 472).
+        - fsGroup: 999 added for PostgreSQL (runs as postgres user, gid 999).
+        - fsGroup: 65534 added for Prometheus (runs as nobody).
+
+    12. BUILD/ARTIFACT ISSUES:
+        - All custom images (ralfx22/*) are pre-built and pulled from Docker Hub.
+          No build context issues. pull_policy: always from Compose is handled by
+          Kubernetes default imagePullPolicy (Always for :latest, IfNotPresent otherwise).
+          Consider setting imagePullPolicy: Always explicitly if needed.
+
+    13. GRAFANA ENV VARS:
+        - Original Compose used lowercase env var names (gf_security_admin_user).
+          Grafana reads GF_* env vars case-insensitively but uppercase is canonical.
+          Changed to uppercase (GF_SECURITY_ADMIN_USER, GF_SECURITY_ADMIN_PASSWORD).
+
+    14. NAMESPACE:
+        - All resources placed in 'rrb-app' namespace per architecture plan.

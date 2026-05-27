@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservice-demo-config
+  namespace: microservice-demo
+data:
+  DB_NAME: "Microservice-demo-user"
+  MONGO_INITDB_DATABASE: "Microservice-demo-user"
+  MYSQL_DATABASE: "microservice-project"
+  POSTGRES_DB: "microservice-task"
+  POSTGRES_USER: "postgres"
+  USER_ADDRESS: "user:8080"
+  PROJECT_ADDRESS: "project:8081"
+  TASK_ADDRESS: "task:8082"
+  HOST: "api"
+  PORT: "8083"
+  PROXY_PORT: "9090"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: microservice-demo-secrets
+  namespace: microservice-demo
+type: Opaque
+stringData:
+  USER_DB_URI: "mongodb://mongo:27017/"
+  PROJECT_DB_URI: "mysql+mysqldb://root:password@mysql:3306/microservice-project"
+  TASK_DB_URI: "postgres://postgres:password@postgresql:5432/microservice-task"
+  MYSQL_ROOT_PASSWORD: "password"
+  POSTGRES_PASSWORD: "password"

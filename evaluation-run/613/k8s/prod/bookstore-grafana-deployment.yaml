@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-grafana
+  namespace: bookstore
+  labels:
+    app: bookstore-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-grafana
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: bookstore-grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: bookstore-grafana
+          image: ralfx22/bsa-grafana:latest
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          resources:
+            requests:
+              memory: "256Mi"
+            limits:
+              memory: "256Mi"
+          volumeMounts:
+            - name: bookstore-graphana-volume
+              mountPath: /var/lib/grafana
+      restartPolicy: Always
+      volumes:
+        - name: bookstore-graphana-volume
+          persistentVolumeClaim:
+            claimName: bookstore-graphana-volume

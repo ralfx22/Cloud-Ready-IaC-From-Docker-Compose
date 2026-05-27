@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app for all resources.
+    - Added a public ALB-backed Ingress for api-gateway on port 8080 using ingressClassName alb and HTTP-only annotations as required by the architecture plan.
+    - Converted api-gateway, discovery-server, and other service-backed workloads that Kompose rendered as standalone Pods into Deployments where appropriate for baseline resiliency; left account-api, asset-management-api, notification-api, and transaction-api as Pods because the plan explicitly notes these realization gaps and no stable Service definitions were planned for them.
+    - Preserved internal Services as ClusterIP and fixed selectors to align with workload pod labels.
+    - Removed duplicate Service ports emitted by Kompose.
+    - Omitted all probes because no exact probe definitions were evidenced in the source manifests or compose file.
+    - account-api, asset-management-api, notification-api, and transaction-api still have no Kubernetes Service objects because compose declared no ports and the architecture plan identified this as an existing functional gap. These pods may not be reachable by stable DNS names from other workloads.
+    - Host bind mounts reported by Kompose as unsupported were not preserved as hostPath volumes.
+    - account-api-mongo PVC was kept and its mount path was corrected from /data/mongo to MongoDB's standard runtime data directory /data/db so data persistence is more likely to function.
+    - asset-management-api-mysql PVC was kept and its mount path was corrected from /data/mysql to MySQL's standard runtime data directory /var/lib/mysql. Added pod securityContext.fsGroup 999 for non-root-compatible volume ownership handling.
+    - transaction-api-postgres PVC was kept and its mount path was corrected from /data/postgres to PostgreSQL's standard runtime data directory /var/lib/postgresql/data. Added PGDATA=/var/lib/postgresql/data/pgdata to avoid lost+found conflicts on freshly formatted volumes and added pod securityContext.fsGroup 999.
+    - grafana PVC was kept at /var/lib/grafana and pod securityContext.fsGroup 472 was added for writable persistent storage.
+    - config-server mount /app/resources/config-files was classified by the plan as config-like rather than persistent runtime data. The Kompose-generated PVC for this path was removed and replaced with emptyDir to keep the pod spec applyable without inventing missing configuration content. Actual config files remain unresolved and should be baked into the image or supplied by ConfigMap/Secret later.
+    - prometheus host-file mount to /etc/prometheus/prometheus.yml was classified by the plan as config-like rather than persistent data. The Kompose-generated PVC was removed and replaced with a standard ConfigMap-mounted file. Because the original prometheus-configuration.yml content was unavailable, a minimal placeholder Prometheus configuration was added so the pod can start; scrape intent beyond self-scrape remains unresolved.
+    - MySQL, PostgreSQL, and Grafana plaintext credentials from compose were moved into standard Kubernetes Secrets to preserve environment wiring without introducing non-standard secret systems.
+    - Kafka networking was corrected for Kubernetes safety. Removed localhost advertised external listener usage and rewrote internal settings to pod-local/controller-local topology: KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:29093, listeners bound to 0.0.0.0, and advertised listener set to notification-api-kafka.rrb-app.svc.cluster.local:9092.
+    - Grafana compose links to prometheus were not represented by Kompose and were not reintroduced because Kubernetes service discovery supersedes links.
+    - Unresolved artifact/config issue: config-server depends on configuration files that were referenced via a missing host bind mount in compose; no actual config file content was provided in the inputs.
+    - Unresolved artifact/config issue: prometheus original configuration file content was missing from inputs; a minimal placeholder config was supplied only to keep manifests applyable.
+    - Kompose warnings carried forward: compose version field obsolete; unsupported/missing host bind mounts for account-api-mongo, asset-management-api-mysql, config-server, grafana, prometheus, and transaction-api-postgres; services account-api, asset-management-api, notification-api, and transaction-api were not created because ports were not specified.

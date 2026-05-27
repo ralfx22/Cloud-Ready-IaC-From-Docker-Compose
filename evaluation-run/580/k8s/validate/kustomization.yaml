@@ -1,0 +1,10 @@
+namespace: ns-580
+resources:
+  - resources/00-namespace.yaml
+  - resources/10-app-config.yaml
+  - resources/11-app-secrets.yaml
+  - resources/20-storage.yaml
+  - resources/30-services.yaml
+  - resources/40-workloads.yaml
+  - resources/50-ingress.yaml
+  - resources/99-migration-notes.yaml

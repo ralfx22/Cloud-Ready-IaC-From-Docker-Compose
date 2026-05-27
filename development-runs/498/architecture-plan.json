@@ -1,0 +1,107 @@
+
+{
+  "k8s": {
+    "namespace": "rrb-app",
+    "services": [
+      {
+        "name": "account-api-mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      },
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "asset-management-api-mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "config-server",
+        "type": "ClusterIP",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "discovery-server",
+        "type": "ClusterIP",
+        "port": 8761,
+        "exposed": false
+      },
+      {
+        "name": "grafana",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "notification-api-kafka",
+        "type": "ClusterIP",
+        "port": 9092,
+        "exposed": false
+      },
+      {
+        "name": "prometheus",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "redis",
+        "type": "ClusterIP",
+        "port": 6379,
+        "exposed": false
+      },
+      {
+        "name": "transaction-api-postgres",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "zipkin",
+        "type": "ClusterIP",
+        "port": 9411,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 6,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": 2,
+    "private_subnets": 2,
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Baseline AWS plan: one VPC across 2 AZs, public and private subnets, managed EKS 1.35, one managed node group using t3.small nodes, cluster OIDC enabled, and IRSA configured. Standard EKS managed add-ons vpc-cni, kube-proxy, and coredns are required; vpc-cni must be created before compute. Because PVCs exist in the realized manifests, include the EBS CSI driver via IRSA and ensure a default StorageClass exists so PVCs do not remain Pending.",
+    "Use a dedicated namespace 'rrb-app'. Keep all workload Services internal ClusterIP except one validation entrypoint. Since api-gateway is the only clear HTTP front door in the manifests, plan a public ALB-backed Ingress routing HTTP to api-gateway:8080. TLS is not explicitly required by the inputs, so HTTP-only is sufficient for baseline validation. Public subnets must carry Kubernetes/ELB discovery tags so AWS Load Balancer Controller can place the ALB.",
+    "What actually gets applied per Kompose/K8s should be preferred over Compose intent. Realized Services exist only for account-api-mongo, api-gateway, asset-management-api-mysql, config-server, discovery-server, grafana, notification-api-kafka, prometheus, redis, transaction-api-postgres, and zipkin. account-api, asset-management-api, notification-api, and transaction-api were converted only as naked Pods with no Services because Kompose warned that ports were not specified.",
+    "Important discrepancy: the four application APIs without ports in Compose are not externally or internally addressable by Kubernetes Service as generated. The baseline infra plan does not invent additional Services for them because the current realized manifests do not expose ports. This likely means the application set will not be fully functional until workload manifests are corrected, but infra planning remains minimal and aligned to the provided K8s output.",
+    "Persistence and storage classification from Compose intent plus K8s realization: account-api-mongo mount /data/mongo was treated by Kompose as persistent PVC, but Mongo's conventional runtime data directory is /data/db, so the mount path appears inconsistent with the image convention and should not be preserved blindly; record as a likely app-manifest issue. asset-management-api-mysql mount /data/mysql was treated as persistent PVC, but MySQL conventional runtime data directory is /var/lib/mysql; current mount path is likely incorrect. transaction-api-postgres mount /data/postgres was treated as persistent PVC, but PostgreSQL conventional runtime data directory is /var/lib/postgresql/data; current mount path is likely incorrect. grafana mount /var/lib/grafana is a valid persistent data path and should remain persistent. config-server mount /app/resources/config-files is config-like, not data-like; PVC is not architecturally correct for baseline config delivery. prometheus mount /etc/prometheus/prometheus.yml is a config-file path; PVC is not architecturally correct there either and should be ConfigMap/image-baked config rather than persistent storage, but the realized manifest currently uses a PVC so EBS CSI is still required for that baseline to schedule.",
+    "Config and secrets classification: spring.profiles.active and spring.cloud.config.uri are plain configuration and fit ConfigMap/env usage. MYSQL_DATABASE, MYSQL_USER, POSTGRES_DB are plain config. MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD, POSTGRES_PASSWORD, Grafana admin credentials are sensitive and should be Secrets in a production-ready manifest set, but the provided realized manifests contain them inline as plain env values. No AWS Secrets Manager integration is added because it is not explicitly required.",
+    "Kafka networking needs Kubernetes-safe addressing changes if corrected later: Compose includes KAFKA_ADVERTISED_LISTENERS with HOST://localhost:9092, which is invalid for Kubernetes clients beyond localhost semantics. For a correct K8s deployment, advertised listeners should use Service DNS names and distinct internal/external listeners as needed. The current realized manifest preserves the Compose values, so note this as a probable runtime issue rather than solving it in infrastructure.",
+    "Workload controller shape in the realized manifests is mixed: several services are Pods rather than Deployments due to Kompose behavior. Stateful components with persistence intent were rendered as Deployments plus PVCs instead of StatefulSets. For minimal planning, do not add extra controllers beyond what is required by current manifests, but note that MongoDB, MySQL, PostgreSQL, and Kafka would be better represented as StatefulSets when manifests are corrected.",
+    "Node sizing math using required 1.4 GiB allocatable per t3.small node: estimated per-service minimum memory requests for auditability -> account-api 512Mi, account-api-mongo 512Mi, api-gateway 512Mi, asset-management-api 512Mi, asset-management-api-mysql 512Mi, config-server 512Mi, discovery-server 512Mi, grafana 256Mi, notification-api 512Mi, notification-api-kafka 1024Mi, prometheus 512Mi, redis 256Mi, transaction-api 512Mi, transaction-api-postgres 512Mi, zipkin 512Mi. Total estimated workload memory = 7680Mi. Cluster add-on/controller overhead expected in baseline: aws-load-balancer-controller ~256Mi, ebs-csi-controller/node combined reservation ~256Mi, system pods on worker nodes consume part of allocatable but sizing rule already fixes allocatable at 1.4 GiB per node. 5 nodes provide about 7168Mi allocatable, which is below workload estimate, so choose 6 nodes providing about 8601Mi allocatable. Pod count is also acceptable on 6 nodes.",
+    "Kompose warnings and unsupported features to retain in plan notes: Compose version field marked obsolete; several host paths/files were missing and Kompose ignored host-side paths; account-api, asset-management-api, notification-api, and transaction-api were warned as services not created because ports were not specified; Compose links were not meaningfully preserved; host bind mounts for config-files and prometheus-configuration.yml cannot be assumed to exist and should be treated as missing inputs. If the app expects packaged classpath/internal resources, they must be baked into the image or provided explicitly as ConfigMaps in future manifest corrections."
+  ]
+}

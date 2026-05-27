@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |-
+    Kompose warnings and planning decisions:
+    - Kompose warned: "Service \"quotes\" won't be created because 'ports' is not specified". A ClusterIP Service for 'quotes' on port 5000 was added to match docker-compose intent (api references http://quotes:5000).
+    - Docker Compose used an obsolete 'version' field; benign for conversion.
+    - All resources placed into namespace 'sme-app' per architecture plan.
+    - Ingress created for frontend using IngressClassName 'alb' and ALB annotations to allow AWS Load Balancer Controller to provision an internet-facing ALB for validation.
+    - ALB Ingress annotations included: alb.ingress.kubernetes.io/scheme=internet-facing, alb.ingress.kubernetes.io/target-type=ip, alb.ingress.kubernetes.io/listen-ports='[{"HTTP":80}]'. TLS/ACM was NOT configured (HTTP-only) per plan.
+    - Services are ClusterIP (internal) per plan; frontend is exposed via ALB Ingress only.
+    - Probes were omitted intentionally: source manifests did not provide explicit probe configuration (no exact port/path/exec). Add ready/liveness probes later if exact values are known.
+    - No PersistentVolumeClaims were present in the source; none were created. If storage is later required, add PVCs and StorageClass (aws-ebs-csi) as needed.
+    - No external/CRD-based resources were created. This manifest set uses only standard Kubernetes APIs (core/v1, apps/v1, networking.k8s.io/v1).
+    - Ensure AWS Load Balancer Controller (via IRSA) is installed in the cluster and that public subnets are tagged so the ALB can become internet-facing.
+    - Validate container images are reachable from cluster nodes; add imagePullSecrets if using private registries.
+    - This manifests set is intended for application-level validation in a clean cluster. Additional operational resources (RBAC for controllers, metrics-server, cert-manager, CSI drivers) are out of scope for this migration step.

@@ -1,0 +1,4 @@
+namespace: ns-516
+resources:
+  - resources/migration-notes.yaml
+  - resources/quotes-app.yaml

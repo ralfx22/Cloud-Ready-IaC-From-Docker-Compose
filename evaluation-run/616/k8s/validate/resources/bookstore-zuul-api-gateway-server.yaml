@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-zuul-api-gateway-server
+  namespace: bookstore
+  labels:
+    app: bookstore-zuul-api-gateway-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-zuul-api-gateway-server
+  template:
+    metadata:
+      labels:
+        app: bookstore-zuul-api-gateway-server
+    spec:
+      containers:
+        - name: bookstore-zuul-api-gateway-server
+          image: ralfx22/bsa-api-gateway:latest
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx512m"
+            - name: SERVER_PORT
+              value: "8765"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: ZIPKIN_HOST
+              value: "bookstore-zipkin:9411"
+            - name: SPRING_CLOUD_CONSUL_DISCOVERY_PREFER_IP_ADDRESS
+              value: "true"
+          ports:
+            - containerPort: 8765
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-zuul-api-gateway-server
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  ports:
+    - name: "8765"
+      port: 8765
+      targetPort: 8765
+  selector:
+    app: bookstore-zuul-api-gateway-server
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bookstore-zuul-api-gateway-server
+  namespace: bookstore
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 8765}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bookstore-zuul-api-gateway-server
+                port:
+                  number: 8765

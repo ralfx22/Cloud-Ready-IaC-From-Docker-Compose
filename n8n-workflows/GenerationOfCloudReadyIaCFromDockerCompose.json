@@ -1,0 +1,696 @@
+{
+  "name": "GenerationOfCloudReadyIaCFromDockerCompose",
+  "nodes": [
+    {
+      "parameters": {
+        "command": "=cat \"/data/shared/{{ $execution.id }}/docker-compose.yml\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -352
+      ],
+      "id": "f1589834-9890-4116-b3c8-1fd4a12eb132",
+      "name": "Read Compose file"
+    },
+    {
+      "parameters": {
+        "command": "=set -euo pipefail\n\nOUT=\"/data/shared/{{ $execution.id }}/tf\"\nmkdir -p \"$OUT\"\n\ncat > \"$OUT/main.tf\" <<'TF'\n{{ $json.output }}\nTF"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3872,
+        -112
+      ],
+      "id": "488f24c6-0305-4fa5-bf3a-f25776d1554d",
+      "name": "Write Terraform files",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "command": "=TARGET=\"/data/shared/{{ $execution.id }}/k8s/validate\"\nNS=\"ns-{{ $execution.id }}\"\n: \"${TIMEOUT:=60s}\"\n: \"${CLEANUP:=1}\"\n\n# Quick error report\nset -eu\nset -x\n\ndebug() {\n  echo \"=== DEBUG (namespace: $NS) ===\" 1>&2\n  kubectl -n \"$NS\" get pods -o wide 1>&2 || true\n  kubectl -n \"$NS\" get events --sort-by=.lastTimestamp 1>&2 || true\n}\n\n# Namespace deletion also deletes pods\ncleanup() {\n  if [ \"$CLEANUP\" = \"1\" ]; then\n    echo \"Cleaning up namespace: $NS\" 1>&2\n    kubectl delete ns \"$NS\" --ignore-not-found --wait=true --timeout=180s >/dev/null 2>&1 || true\n  else\n    echo \"CLEANUP=0 set; keeping namespace: $NS\" 1>&2\n  fi\n}\n\n# Ensure cleanup always runs. On error, also dump debug info.\ntrap 'cleanup' EXIT\ntrap 'debug; exit 1' INT TERM HUP\n\nif [ -z \"${TARGET:-}\" ]; then\n  echo \"TARGET is empty; set TARGET to a YAML dir/file\" 1>&2\n  exit 64\nfi\n\necho \"Using namespace: $NS\"\nkubectl get ns \"$NS\" >/dev/null 2>&1 || kubectl create ns \"$NS\" >/dev/null\n\necho \"Applying: $TARGET\"\nkubectl apply -k \"$TARGET\"\n\necho \"Wait for deployments (timeout=$TIMEOUT)\"\nkubectl -n \"$NS\" wait --for=condition=Available deployment --all --timeout=\"$TIMEOUT\" >/dev/null 2>&1 || true\n\necho \"Wait for pods to be Ready (timeout=$TIMEOUT)\"\nif ! kubectl -n \"$NS\" wait --for=condition=Ready pod --all --timeout=\"$TIMEOUT\"; then\n  debug\n  exit 1\nfi\n\necho \"Status:\"\nkubectl -n \"$NS\" get pods -o wide"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        -336
+      ],
+      "id": "c33de848-3050-44fa-86dd-455b4f7decc0",
+      "name": "Kubectl apply smoketest",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/data/shared/{{ $execution.id }}-docker-compose.yml",
+        "dataPropertyName": "=data0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        128,
+        -80
+      ],
+      "id": "c31b2cc9-835a-49ae-8559-c09c834a2595",
+      "name": "Write Compose file"
+    },
+    {
+      "parameters": {
+        "command": "=cd \"/data/shared\"\nmkdir -p {{ $execution.id }}\nmv {{ $execution.id }}-docker-compose.yml {{ $execution.id }}/docker-compose.yml"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -80
+      ],
+      "id": "926ce2c0-255c-4e53-9443-06b3f65a7c14",
+      "name": "Move Compose file"
+    },
+    {
+      "parameters": {
+        "command": "=cd \"/data/shared/{{ $execution.id }}\"\nmkdir -p kompose\nkompose convert -f docker-compose.yml -o kompose/ 2> kompose-log.log\ncat kompose-log.log >&2"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        576,
+        64
+      ],
+      "id": "fba0981a-8989-4ca6-99c7-bda21c380072",
+      "name": "Run Kompose"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3296,
+        -112
+      ],
+      "id": "aec2ca29-fd35-4292-bf52-55656ae5cbda",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1024,
+        -128
+      ],
+      "id": "a050aa29-146f-4322-8fb3-5f360355ee64",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1824,
+        -352
+      ],
+      "id": "5b7e7faa-2542-410c-8341-c6be2a9c4c23",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "description": "=Call this tool with the content main.tf to execute terraform fmt, terraform init, terraform validate.",
+        "workflowId": {
+          "__rl": true,
+          "value": "FVja73xh4n3l533f",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/FVja73xh4n3l533f",
+          "cachedResultName": "terraform_validate"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        3600,
+        128
+      ],
+      "id": "09e6d225-1441-4dd1-898f-12377d5bb805",
+      "name": "terraform_validate"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.4",
+          "mode": "list",
+          "cachedResultName": "gpt-5.4"
+        },
+        "builtInTools": {},
+        "options": {
+          "reasoningEffort": "medium"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2064,
+        336
+      ],
+      "id": "f28172ee-0a0f-4d5a-93e3-c689679133e2",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "LUiQRTwuyKyJEGYa",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-opus-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Opus 4.6"
+        },
+        "options": {
+          "maxTokensToSample": 16000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        2256,
+        336
+      ],
+      "id": "60c502f8-cb97-4d5c-9d29-2b4eb28186ca",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "a5xh8cUUctBd5DVO",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\"files\"],\n  \"properties\": {\n    \"files\": {\n      \"type\": \"array\",\n      \"minItems\": 1,\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"required\": [\"path\", \"content\"],\n        \"properties\": {\n          \"path\": { \"type\": \"string\", \"minLength\": 1 },\n          \"content\": { \"type\": \"string\" }\n        }\n      }\n    }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2192,
+        48
+      ],
+      "id": "130e7091-0b33-4cf7-9c98-14eca953e2dd",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "command": "=cd \"/data/shared\" && mkdir -p {{ $execution.id }} && cat > {{ $execution.id }}/architecture-plan.json << 'EOF'\n{{ $json.output }}\nEOF"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        -256
+      ],
+      "id": "e9aeb5f6-ddf5-4aad-8ae9-5f8f6685ee2a",
+      "name": "Save architecture plan"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Produce the plan according to the system prompt based on the information below.\n\nOriginal Docker Compose YAML (source of intent):\n{{ $('Read Compose file').item.json.stdout }}\n\nKompose combined Kubernetes YAML (current realization):\n{{ $('Combine Kompose files').item.json.stdout }}\n\nKompose stderr (warnings/errors):\n{{ $('Run Kompose').item.json.stderr }}",
+        "options": {
+          "systemMessage": "=You are a cloud infrastructure planner for AWS.\nYour job is to design Infrastructure as Code for microservice applications on AWS, using EKS as the Kubernetes control plane.\n\n## Inputs\n\n- The original Docker Compose file.\n- Kubernetes manifests generated from Docker Compose with Kompose for a microservice application.\n- Kompose stderr output (warnings and unsupported features).\n\n## Task\n\nYour task in THIS step is planning only, not code generation.\n\n- You must output a single JSON object describing the infrastructure plan in a fixed schema.\n- Do NOT output Terraform code here.\n- Use Docker Compose to infer: volumes/persistence intent, exposed ports, dependencies, environment/config/secrets patterns, replicas hints.\n- Use Kompose/K8s manifests to confirm what will actually be applied/validated.\n- If Compose and K8s disagree (ports/volume intent), prefer K8s for what gets applied and record the discrepancy under notes.\n\n## Rules\n\n- Minimal-only rule: Plan only what's required for a working baseline. Always include VPC + managed EKS + managed node group + OIDC/IRSA.\n- No speculative extras: Do not add optional components \"just in case\" (extra autoscalers, observability stacks, service mesh, policy engines, complex overlays).\n- When unsure, omit: If a feature needs missing info, leave it out and record the gap under notes.\n- Dedicated namespace: Always plan a non-default namespace for the application.\n- Treat the Docker Compose file as the only guaranteed initial input. Do not assume referenced local files or directories actually exist.\n\n### Node sizing\n\n- Use AWS t3.small instances (2 GB RAM, 1.4 GB allocatable per node after kubelet, kube-proxy, and OS reservations). Do not use 2 GiB as the allocatable value, always use 1.4 GiB for node sizing math.\n- Estimate desired_node_count based on total pod count, per-node pod limit, and expected memory consumption per pod.\n- For each service in the Docker Compose file, estimate its minimum memory requirement based on its runtime characteristics. If the image or service type gives no clear signal, default to 512 Mi.\n- List each service with its estimated memory in the notes field so the math is auditable.\n- Always provision enough nodes so that total cluster allocatable memory exceeds total pod memory requests.\n\n### Add-ons\n\n- Standard EKS add-ons (mandatory baseline): Always provision the core EKS managed add-ons vpc-cni, kube-proxy, and coredns and ensure they reach a healthy state. Ensure that vpc-cni is added before node group creation (before_compute = true). Do not assume the cluster will function or nodes will become Ready without them.\n- Trigger-based add-ons: Add controllers/add-ons only when the manifests or intent explicitly require them (e.g., PVCs -> EBS CSI; HPA -> metrics-server; DNS automation signals -> ExternalDNS; explicit TLS/cert requirement -> cert-manager).\n\n### Ingress\n\n- Expose at least one externally reachable entrypoint for validation: If the manifests do not already define an ingress path, create a minimal public access path (Ingress via AWS ALB) to one primary HTTP service/port so end-to-end smoke tests can be executed. Keep all other services internal unless explicitly required.\n- To expose one HTTP entrypoint via an AWS Application Load Balancer on EKS, plan for the AWS Load Balancer Controller to provision ALB resources from Kubernetes Ingress objects:\n  1. Ensure the cluster runs the controller with AWS API access (least-privilege).\n  2. Ensure the network has ALB-eligible subnets with correct discovery tags so the controller can place an internet-facing ALB in public subnets (or an internal ALB in private subnets).\n  3. Record whether TLS is required (ACM certificate) or HTTP-only is sufficient for baseline validation.\n\n### Storage and networking\n\n- Classify each mount/config source as one of: image-baked config, ConfigMap, Secret, persistent data, ephemeral runtime data.\n- Do not carry Docker Compose host-path semantics into the architecture plan unchanged. You must determine the correct runtime data directory used by the container image or the evident service convention. If the Compose target path appears inconsistent with the standard runtime data directory, do not preserve it blindly.\n- For stateful services, explicitly decide: persistence or not; correct in-container data path; PVC or not; Deployment or StatefulSet\n- If the app expects classpath/internal packaged resources, note that they must be included in the final image, not provided via host bind mounts.\n- PVCs are required for clear persistent runtime data paths. PVCs are forbidden for config paths and config-like paths. If a mount is ambiguous, decide whether it is data-like or config-like before choosing storage. Do not use PVC as a fallback for possible config.\n- Separate bind addresses, advertised client addresses, and internal control-plane addresses. Never preserve Compose networking values when they are invalid for Kubernetes; replace them with Kubernetes-safe addresses and record the change.\n- When the EBS CSI driver is provisioned and PVCs do not specify storageClassName, ensure a default StorageClass exists. Without this, PVCs remain Pending indefinitely.\n\n## Output format\n\nThe JSON must follow this shape (fill out parameters x):\n{\n  \"k8s\": {\n    \"namespace\": \"x\",\n    \"services\": [\n      {\n        \"name\": \"x\",\n        \"type\": \"x\",\n        \"port\": x,\n        \"exposed\": x\n      }\n   ]\n  },\n  \"cluster\": {\n    \"type\": \"managed\",\n    \"flavor\": \"eks\",\n    \"version\": \"1.35\",\n    \"desired_node_count\": x,\n    \"instance_type\": \"x\"\n  },\n  \"network\": {\n    \"vpc_cidr\": \"10.0.0.0/16\",\n    \"public_subnets\": x,\n    \"private_subnets\": x,\n    \"needs_nat_gateway\": x\n  },\n  \"ingress\": {\n    \"enabled\": x,\n    \"controller\": \"alb\"\n  },\n  \"modules\": {\n    \"vpc_module\": \"terraform-aws-modules/vpc/aws\",\n    \"eks_module\": \"terraform-aws-modules/eks/aws\"\n  },\n  \"notes\": [\n    \"High-level design decisions and any Compose and K8s discrepancies\",\n    \"Key Kompose warnings/unsupported features\"\n ]\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1248,
+        -112
+      ],
+      "id": "f2d4f0da-6b4c-4f51-a2bf-19816ab68116",
+      "name": "Architecture agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate an apply-ready Terraform repository for AWS EKS for the application described below.\n\nArchitecture plan:\n{{ $('Architecture agent').item.json.output }}\n\nKubernetes manifests:\n{{ $json.stdout }}",
+        "options": {
+          "systemMessage": "=You are the Terraform Platform Agent for AWS EKS.\n\n## Inputs\n\n- Planning JSON (authoritative contract).\n- Kubernetes manifests (YAML) (supporting data only).\n\n## Task\n\nGenerate an apply-ready Terraform repository that provisions AWS infrastructure required to run the workload on Amazon EKS in eu-central-1, implementing the planning JSON exactly and keeping the result minimal and reproducible.\n\n## Rules\n\n- Implement the planning JSON exactly (especially the Kubernetes version), only infer details that are not specified.\n- Target EKS only (managed control plane). No ECS, no self-managed Kubernetes.\n- Use manifests only to fill in missing technical details (e.g., confirm add-on triggers if the plan is incomplete).\n- If any conflict appears between inputs, follow the planning JSON and document the issue in a short # NOTE: comment block at the top (or bottom) of main.tf\n- The configuration must be apply-ready, but the automated check will run only fmt/init/validate.\n- Do not apply application manifests via Terraform.\n\n### Version pinning\n\n- Use community modules and pin tool/provider versions:\n  - Terraform CLI ~> 1.14.3\n  - hashicorp/aws ~> 6.28\n  - terraform-aws-modules/vpc/aws ~> 6.6\n  - terraform-aws-modules/eks/aws ~> 21.0\n\n### EKS module compatibility\n\n- EKS v21 compatibility:\n  - Input renames (most important): all cluster_* inputs lost the prefix, e.g.\n    - cluster_name → name\n    - cluster_version → kubernetes_version\n    - cluster_endpoint_public_access → endpoint_public_access\n    - cluster_endpoint_private_access → endpoint_private_access\n    - cluster_enabled_log_types → enabled_log_types\n    - cluster_addons → addons\n- Add-ons are expected via EKS Addons API: bootstrap_self_managed_addons is effectively off, use the module's addons configuration (and note its type is a map of objects, not a list).\n- Managed node groups: use eks_managed_node_groups (not legacy node_groups).\n- Practical implication for you: you must (1) use the renamed inputs, (2) configure node groups via eks_managed_node_groups, (3) configure core add-ons via addons as a map, and (4) not reference old outputs like module.eks.node_groups.\n\n### Load Balancer Controller\n\n- Implement the prerequisites for AWS Load Balancer Controller and subnet discovery:\n  - Tag public subnets with `kubernetes.io/role/elb=1` and private subnets with `kubernetes.io/role/internal-elb=1`, plus `kubernetes.io/cluster/<cluster-name>=shared|owned`\n  - Enable OIDC/IRSA on the EKS cluster\n  - Create an IAM role for the controller with a trust policy restricted to the controller's `kube-system` ServiceAccount, and source the controller permissions from the official upstream AWS Load Balancer Controller IAM policy JSON. DO NOT hand-craft the policy, except the user explicitly asks for.\n- Install the AWS Load Balancer Controller via Helm (or equivalent) configured with cluster name, region, and VPC, using the IRSA-bound ServiceAccount.\n\n- Ensure the Terraform execution identity has valid Kubernetes API access to the cluster for Helm/Kubernetes provider operations (enable_cluster_creator_admin_permissions = true).\n- Do not create an ALB directly in Terraform; Terraform must only provision the controller and its permissions so that ALBs are created dynamically from Kubernetes Ingress resources.\n\n### Data sources and dependencies\n\n- Ensure Terraform data sources, providers, and dependent resources only read infrastructure when it already exists and remains available; avoid configurations that trigger reads before creation or after destruction.\n  - e. g.:\n  data \"aws_eks_cluster_auth\" \"this\" {\n    name       = module.eks.cluster_name\n    depends_on = [module.eks]\n  }\n\n### Storage\n\n- When the planning JSON includes the EBS CSI driver add-on, provision a default StorageClass. This ensures PVCs without an explicit storageClassName can bind.\n\n### Output\n\n- Generate and output only the raw Terraform content of main.tf (no JSON, no Markdown fences, no explanations).\n- After producing the main.tf, call tool terraform_validate with the content of main.tf to execute terraform fmt, terraform init, terraform validate. Fix only what the logs report and call the tool up to 5 times.",
+          "maxIterations": 5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3520,
+        -112
+      ],
+      "id": "0ce03860-87af-4b74-87c3-63f6f0c430cb",
+      "name": "Terraform agent"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "compose-to-k8s",
+        "responseMode": "lastNode",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -96,
+        -80
+      ],
+      "id": "7e987847-6b79-4311-b851-13cc61f02e83",
+      "name": "Upload Compose file",
+      "webhookId": "6b5cb6e1-fc20-41ee-9738-d95b729b86ff"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Architecture plan:\n{{ $('Architecture agent').item.json.output }}\n\nOriginal Docker Compose YAML (source of intent):\n{{ $('Read Compose file').item.json.stdout }}\n\nKompose combined Kubernetes manifests (current realization):\n{{ $('Combine Kompose files').item.json.stdout }}\n\nKompose stderr (warnings/errors):\n{{ $('Run Kompose').item.json.stderr }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a Kubernetes manifest extension agent for AWS/EKS migrations.\n\n## Inputs\n\n- The original Docker Compose YAML (source of intent)\n- The combined Kubernetes manifests generated by Kompose (current realization)\n- Kompose stderr (warnings/unsupported features)\n- The architecture plan JSON produced by the architecture/planning agent (target constraints)\n\n## Task\n\nProduce an extended set of Kubernetes manifests that:\n\n- Can be applied to a clean Kubernetes cluster (validation cluster) with kubectl apply.\n- Are consistent with the architecture plan (namespaces, exposure, ingress approach, etc.).\n\n## Rules\n\n- THIS STEP IS KUBERNETES ONLY. Do NOT output Terraform.\n- Do NOT output explanations, Markdown, or any text outside the required JSON output.\n- YAML must be valid.\n- Follow the architecture plan for all storage, config, networking, and workload-type decisions. Do not re-derive these, the plan is authoritative.\n- Do NOT assume any CRDs are installed (no ExternalSecrets, no ServiceMonitor, etc.).\n- Only use standard Kubernetes APIs (core/v1, apps/v1, networking.k8s.io/v1, autoscaling/v2 where supported).\n- If something depends on AWS controllers (e.g., ALB ingress), you may add standard Ingress resources and annotations, but do not add CRDs.\n- Notes: write all warnings/assumptions into a ConfigMap file (e.g., migration-notes.yaml).\n- Record unresolved build/artifact issues in migration notes.\n- Emit file paths as plain filenames only. Do NOT prefix with any folder.\n- Do not emit any additional files or invent folder prefixes like `k8s/`, `prod/`, or `validate/`.\n\n### Resources\n\n- Probes: OMIT all probes unless explicitly evidenced (exact port+path or exact exec). If probes exist but not evidenced, remove them and note it.\n- Namespace: ensure plan namespace exists; put all resources in it unless already specified.\n- Services: fix selectors/labels; match service ports to containerPorts (else compose ports). Keep internal services ClusterIP.\n- Stateful: use the workload type from the plan. If unspecified, prefer Deployment unless StatefulSet is clearly appropriate.\n\n### Ingress\n\n- Public entry: Expose a baseline entrypoint for a exposed service(s) by keeping the target Service as `ClusterIP` and creating a `networking.k8s.io/v1` Ingress with `spec.ingressClassName: alb` that routes `/` (and optionally a host) to that Service/port\n  1. Add AWS Load Balancer Controller annotations to select ALB behavior (`alb.ingress.kubernetes.io/scheme` internet-facing vs internal, `alb.ingress.kubernetes.io/target-type: ip`, and `alb.ingress.kubernetes.io/listen-ports` JSON for HTTP/HTTPS).\n  2. If TLS is required, add `alb.ingress.kubernetes.io/certificate-arn` (ACM) and an SSL-redirect annotation; otherwise keep HTTP-only.\n- The controller will then provision the ALB and write its DNS name into the Ingress status for validation\n- When creating an ALB Ingress for a service that requires authentication, add a path that returns healthy without authentication.\n\n### Config and secrets\n\n- Config/Secrets: preserve env; if compose secrets missing, add placeholder Secret manifests without breaking existing env wiring.\n\n### Storage\n\n- Storage: keep existing PVCs. If compose named volumes missing as PVCs, add PVCs + mounts (no storageClassName). Avoid hostPath; convert to emptyDir only when safe, otherwise keep and note.\n- Validate all mount paths for correct file/directory semantics and real runtime data locations. Do not keep a Compose path that is likely non-functional.\n- When mounting PVCs to database containers, account for the fact that freshly formatted EBS volumes contain a lost+found directory at the mount root.\n- For containers that run as non-root users and mount persistent volumes, add securityContext.fsGroup to the pod spec so Kubernetes chowns the mounted volume to the container's expected group.\n\n### Networking\n\n- If one pod hosts multiple cooperating roles of the same system, any internal self-reference for quorum, controller, election, or replication traffic must be rewritten to localhost or pod-local addressing. Do not preserve Service DNS names for these internal addresses unless a multi-node topology is explicitly required. Override invalid source values. Source networking settings must not be preserved when they conflict with the actual Kubernetes topology."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2048,
+        -336
+      ],
+      "id": "37a2d740-af3d-4b09-acdd-9ddbff43192a",
+      "name": "Kubernetes agent"
+    },
+    {
+      "parameters": {
+        "command": "=cd \"/data/shared/{{ $execution.id }}/kompose\"\nfor f in *.yaml; do\n  echo \"# FILE: $f\";\n  echo \"---\";\n  cat \"$f\";\n  echo \"\";\ndone"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        800,
+        176
+      ],
+      "id": "21b19ba4-ea4f-46d4-9cba-3e33984354f4",
+      "name": "Combine Kompose files"
+    },
+    {
+      "parameters": {
+        "command": "=set -eu\n\nROOT=\"/data/shared/{{ $execution.id }}/k8s/prod\"\nmkdir -p \"$ROOT\"\n\ncat > \"$ROOT/model.json\" <<'__MODEL_JSON__'\n{{ JSON.stringify($json.output) }}\n__MODEL_JSON__\n\nexport ROOT\n\nnode - <<'NODE'\nconst fs = require('fs');\nconst path = require('path');\n\nconst root = process.env.ROOT;\nconst data = JSON.parse(fs.readFileSync(path.join(root, 'model.json'), 'utf8'));\n\nfor (const f of data.files) {\n  const outPath = path.join(root, f.path);\n  fs.mkdirSync(path.dirname(outPath), { recursive: true });\n  fs.writeFileSync(outPath, f.content, 'utf8');\n}\n\nconsole.log('WROTE_DIR=', root);\nconsole.log('COUNT=', data.files.length);\nNODE\nrm -f \"$ROOT/model.json\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -336
+      ],
+      "id": "e8215914-43c8-4d51-8f64-3b19c335daf7",
+      "name": "Write Kubernetes files"
+    },
+    {
+      "parameters": {
+        "command": "=set -euo pipefail\n\nROOT=\"/data/shared/{{$execution.id}}/k8s\"\nBASE=\"$ROOT/prod\"\nVAL=\"$ROOT/validate\"\nRES=\"$VAL/resources\"\nNS=\"ns-{{$execution.id}}\"\n\nmkdir -p \"$RES\"\n\n# Copy all YAMLs needed for validation into VAL/resources, excluding Namespace manifests\nfor f in \"$BASE\"/*.yaml \"$BASE\"/*.yml; do\n  [ -f \"$f\" ] || continue\n\n  # skip any kustomization file if present\n  case \"$(basename \"$f\")\" in\n    kustomization.yaml|kustomization.yml|Kustomization) continue ;;\n  esac\n\n  cp -f \"$f\" \"$RES/$(basename \"$f\")\"\ndone\n\n# Write overlay kustomization referencing ONLY local files\n{\n  echo \"namespace: $NS\"\n  echo \"resources:\"\n  for f in \"$RES\"/*.yaml \"$RES\"/*.yml; do\n    [ -f \"$f\" ] || continue\n    echo \"  - resources/$(basename \"$f\")\"\n  done\n} > \"$VAL/kustomization.yaml\"\n\necho \"Overlay ready at: $VAL\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        -336
+      ],
+      "id": "6ca3670b-a264-4b3b-b7d5-f682aa55f7c4",
+      "name": "Create smoketest namespace"
+    },
+    {
+      "parameters": {
+        "command": "=cd \"/data/shared/{{ $execution.id }}\"\nfor f in k8s/prod/*.yaml; do\n  echo \"# FILE: $f\";\n  echo \"---\";\n  cat \"$f\";\n  echo \"\";\ndone"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        -336
+      ],
+      "id": "86bdc208-98bb-4ba2-bce6-17b0ddf3336b",
+      "name": "Combine Kubernetes files"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-pro-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        336
+      ],
+      "id": "01f39778-54c2-43a9-a59f-41330a98b3c7",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "r3stG4hTUv2ZSRO9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Read Compose file": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Create dir for compose file": {
+      "main": [
+        [
+          {
+            "node": "Write Compose file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kubectl apply smoketest": {
+      "main": [
+        [
+          {
+            "node": "Combine Kubernetes files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Combine Kubernetes files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Compose file": {
+      "main": [
+        [
+          {
+            "node": "Move Compose file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Compose file": {
+      "main": [
+        [
+          {
+            "node": "Read Compose file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Run Kompose",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Kompose": {
+      "main": [
+        [
+          {
+            "node": "Combine Kompose files",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Terraform agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Architecture agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Kubernetes agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "terraform_validate": {
+      "ai_tool": [
+        [
+          {
+            "node": "Terraform agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Terraform files": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Kubernetes agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save architecture plan": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Architecture agent": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Save architecture plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terraform agent": {
+      "main": [
+        [
+          {
+            "node": "Write Terraform files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Upload Compose file": {
+      "main": [
+        [
+          {
+            "node": "Write Compose file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kubernetes agent": {
+      "main": [
+        [
+          {
+            "node": "Write Kubernetes files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Kompose files": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 2
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Write Kubernetes files": {
+      "main": [
+        [
+          {
+            "node": "Create smoketest namespace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create smoketest namespace": {
+      "main": [
+        [
+          {
+            "node": "Kubectl apply smoketest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Kubernetes files": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Architecture agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Kubernetes agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Terraform agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "Europe/Berlin",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "dd0d2241-d59f-4068-81ae-661dd38f68b6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "47138e7237b2b47e670d7437a85d9b77cb965e57db883fdac88cf9c43b9c9dc6"
+  },
+  "id": "58tzWgnDirBtkVpD",
+  "tags": []
+}

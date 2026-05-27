@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservice-demo
+data:
+  notes: |
+    - Namespace set to microservice-demo for all namespaced resources.
+    - Replaced Kompose-generated bare Pods with controller-managed workloads: Deployments for api-gateway, api, user, project, and task; StatefulSets for mongo, mysql, and postgresql.
+    - Kept all application and database Services as ClusterIP per the architecture plan.
+    - Added an ALB-backed Ingress for api-gateway with ingressClassName=alb, internet-facing scheme, target-type ip, and HTTP listener on port 80.
+    - No TLS configuration was added because the architecture plan indicates HTTP-only validation is sufficient.
+    - Rewrote internal service discovery values from Compose container ports to Kubernetes Service ports:
+      * user:8080
+      * project:8081
+      * task:8082
+      * api:8083
+    - Updated api-gateway upstream port from 50059 to 8083 so it targets the Kubernetes Service port for api.
+    - Moved sensitive connection strings and passwords into Secret microservice-demo-secrets. Non-sensitive settings were placed in ConfigMap microservice-demo-config.
+    - Preserved PVC-backed persistence for mongodb, mongodb-config, mysqldb, and postgresdb at 100Mi each with no storageClassName.
+    - A default StorageClass and the EBS CSI driver are required in the target EKS cluster or these PVCs will remain Pending.
+    - Added initContainers and subPath mounts for database PVCs to avoid fresh-volume lost+found issues on EBS-backed filesystems.
+    - Added pod-level fsGroup: 999 to mongo, mysql, and postgresql to support non-root database containers with persistent volumes.
+    - Added database readiness probes only where explicit Compose healthcheck commands were available. No other probes were added.
+    - Compose depends_on ordering and health-gated startup are not preserved as Kubernetes dependency controls. Application retry behavior is still required.
+    - Docker Compose build contexts were not converted into Kubernetes artifacts. These manifests assume the following images already exist in a reachable registry:
+      * ralfx22/md-user
+      * ralfx22/md-project
+      * ralfx22/md-task
+      * ralfx22/md-api
+    - Unresolved artifact risk: if any referenced image is unavailable to the cluster, the corresponding pods will fail to pull.
+    - Kompose warning recorded: the Compose version field was reported as obsolete.
+    - Kompose warning recorded: local path checks failed for /data/db, /data/configdb, /var/lib/mysql, and /var/lib/postgresql/data; persistence intent was preserved as PVC-backed storage.

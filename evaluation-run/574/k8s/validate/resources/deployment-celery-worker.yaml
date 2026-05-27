@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: celery-worker
+    app.kubernetes.io/part-of: wger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-worker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: celery-worker
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: nginx
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: celery-worker
+          image: docker.io/wger/server:latest
+          command:
+            - /start-worker
+          envFrom:
+            - secretRef:
+                name: wger-prod-env
+          volumeMounts:
+            - name: media
+              mountPath: /home/wger/media
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - wger
+                - inspect
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - wger
+                - inspect
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              memory: 192Mi
+              cpu: 100m
+            limits:
+              memory: 384Mi
+      securityContext:
+        fsGroup: 1000
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media

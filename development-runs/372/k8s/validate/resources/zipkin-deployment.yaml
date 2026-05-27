@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: rrb-app
+  labels:
+    io.kompose.service: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: zipkin
+  template:
+    metadata:
+      labels:
+        io.kompose.service: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:2.24.0
+          ports:
+            - containerPort: 9411

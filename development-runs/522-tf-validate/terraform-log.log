@@ -1,0 +1,25 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+- vpc in .terraform/modules/vpc
+
+Error: Error accessing remote module registry
+
+  on main.tf line 74:
+  74: module "eks" {
+
+Failed to retrieve available versions for module "eks" (main.tf:74) from
+registry.terraform.io: failed to request discovery document: Get
+"https://registry.terraform.io/.well-known/terraform.json": dial tcp: lookup
+registry.terraform.io on 127.0.0.11:53: server misbehaving.
+=== terraform validate ===
+
+Error: Module not installed
+
+  on main.tf line 74:
+  74: module "eks" {
+
+This module is not yet installed. Run "terraform init" to install all modules
+required by this configuration.

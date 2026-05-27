@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: wger
+data:
+  notes.txt: |
+    - Kompose failed due to missing prod.env. Hand-crafted manifests use `wger-env` ConfigMap as placeholder for environment variables.
+    - `nginx.conf` and `redis.conf` were mocked based on expected behaviour since they were not provided.
+    - Since standard EBS volumes are ReadWriteOnce, PVCs for `media` and `static` cannot be attached to multiple nodes. We have enforced `podAffinity` on the `nginx` and `celery-worker` deployments so they are scheduled on the same node as the `web` deployment. This ensures that the RWO volumes can be mounted by all required pods simultaneously.
+    - `postgres` mounts PGDATA to a subpath (`data`) to avoid 'lost+found' directory issue with newly formatted EBS volumes.
+    - Removed `depends_on` as K8s relies on LivenessProbes to handle startup sequencing. Existing exact probes translated to K8s liveness probes.

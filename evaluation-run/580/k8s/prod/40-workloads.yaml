@@ -1,0 +1,403 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: microservice-demo
+  labels:
+    app: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+        - name: user
+          image: ralfx22/md-user
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50051
+              protocol: TCP
+          env:
+            - name: DB_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: USER_DB_URI
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: USER_DB_NAME
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project
+  namespace: microservice-demo
+  labels:
+    app: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project
+  template:
+    metadata:
+      labels:
+        app: project
+    spec:
+      containers:
+        - name: project
+          image: ralfx22/md-project
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50052
+              protocol: TCP
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: PROJECT_DB_URI
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task
+  namespace: microservice-demo
+  labels:
+    app: task
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task
+  template:
+    metadata:
+      labels:
+        app: task
+    spec:
+      containers:
+        - name: task
+          image: ralfx22/md-task
+          imagePullPolicy: IfNotPresent
+          command:
+            - ./init
+          ports:
+            - containerPort: 50053
+              protocol: TCP
+          env:
+            - name: USER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: TASK_USER_ADDRESS
+            - name: PROJECT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: TASK_PROJECT_ADDRESS
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: TASK_DB_URI
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: microservice-demo
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/md-api
+          imagePullPolicy: IfNotPresent
+          args:
+            - serve
+          ports:
+            - containerPort: 50059
+              protocol: TCP
+          env:
+            - name: USER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: API_USER_ADDRESS
+            - name: PROJECT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: API_PROJECT_ADDRESS
+            - name: TASK_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: API_TASK_ADDRESS
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: microservice-demo
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/md-api
+          imagePullPolicy: IfNotPresent
+          args:
+            - proxy
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+          env:
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: API_GATEWAY_HOST
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: API_GATEWAY_PORT
+            - name: PROXY_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: API_GATEWAY_PROXY_PORT
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: microservice-demo
+  labels:
+    app: mongo
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: mongo
+          image: mongo
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          env:
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: MONGO_INITDB_DATABASE
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - "db.runCommand({ ping: 1 }).ok"
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - "db.runCommand({ ping: 1 }).ok"
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: mongodb
+              mountPath: /data/db
+            - name: mongodb-config
+              mountPath: /data/configdb
+      volumes:
+        - name: mongodb
+          persistentVolumeClaim:
+            claimName: mongodb
+        - name: mongodb-config
+          persistentVolumeClaim:
+            claimName: mongodb-config
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: microservice-demo
+  labels:
+    app: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: mysql
+          image: mysql:5.7
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: MYSQL_DATABASE
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_ROOT_PASSWORD
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+                - -uroot
+                - -ppassword
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+                - -uroot
+                - -ppassword
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: mysqldb
+              mountPath: /var/lib/mysql
+              subPath: mysql-data
+      volumes:
+        - name: mysqldb
+          persistentVolumeClaim:
+            claimName: mysqldb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: microservice-demo
+  labels:
+    app: postgresql
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgresql
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U postgres -d microservice-task
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U postgres -d microservice-task
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: postgresdb
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgresdb
+          persistentVolumeClaim:
+            claimName: postgresdb

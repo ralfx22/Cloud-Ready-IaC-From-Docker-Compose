@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: discovery-server
+  namespace: microservices
+  labels:
+    io.kompose.service: discovery-server
+spec:
+  containers:
+    - env:
+        - name: spring.cloud.config.uri
+          value: http://config-server:8888/config-server
+        - name: spring.profiles.active
+          value: docker
+      image: 0145136798/discovery-server
+      name: discovery-server
+      ports:
+        - containerPort: 8761
+          protocol: TCP
+  restartPolicy: OnFailure

@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+  labels:
+    app.kubernetes.io/part-of: sme-app
+data:
+  "01-quotes-service-created": |
+    Kompose did not generate a Service for 'quotes' because no 'ports' key was
+    specified in the Compose file. A ClusterIP Service on port 5000 has been
+    created manually so the api container's QUOTES_API=http://quotes:5000 env
+    var resolves correctly within the sme-app namespace.
+  "02-quotes-containerPort-added": |
+    The quotes Deployment had no containerPort. Port 5000 was added based on
+    the api service's QUOTES_API environment variable referencing port 5000.
+  "03-probes-omitted": |
+    No liveness or readiness probes have been added to any Deployment because
+    there is no explicit evidence of health-check endpoints (port+path or exec
+    command) for any of the three services. Add probes once verified.
+  "04-labels-normalized": |
+    Kompose-generated labels (io.kompose.service) have been replaced with
+    standard app.kubernetes.io/name labels. Selectors and Service selectors
+    were updated accordingly.
+  "05-kompose-version-warning": |
+    Kompose warned that 'version' in docker-compose.yml is obsolete.
+    This is informational only and has no impact.
+  "06-frontend-port-mapping": |
+    Frontend container listens on port 80 (Nginx). The Kubernetes Service maps
+    port 8080 -> targetPort 80, matching the Compose '8080:80' mapping. The ALB
+    Ingress routes to the frontend Service on port 8080.
+  "07-ingress-http-only": |
+    The ALB Ingress is configured for HTTP-only (port 80). No TLS certificate
+    ARN was provided. Add alb.ingress.kubernetes.io/certificate-arn and
+    alb.ingress.kubernetes.io/ssl-redirect annotations when TLS is needed.
+  "08-no-volumes-or-secrets": |
+    All three services are stateless. No PVCs, Secrets, or ConfigMaps (beyond
+    this migration-notes ConfigMap) are required.
+  "09-alb-controller-required": |
+    The ALB Ingress requires the AWS Load Balancer Controller to be installed
+    in the cluster with appropriate IRSA permissions. The controller will
+    provision an internet-facing ALB and write its DNS name into the Ingress
+    status.
+  "10-no-build-artifacts": |
+    All three services use pre-built images from Docker Hub (ralfx22/sme-*).
+    No build/artifact issues to resolve.

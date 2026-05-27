@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-server
+  namespace: rrb-app
+  labels:
+    io.kompose.service: discovery-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: discovery-server
+  template:
+    metadata:
+      labels:
+        io.kompose.service: discovery-server
+    spec:
+      containers:
+        - name: discovery-server
+          image: ralfx22/rrb-discovery-server
+          ports:
+            - containerPort: 8761
+          env:
+            - name: spring.cloud.config.uri
+              value: "http://config-server:8888/config-server"
+            - name: spring.profiles.active
+              value: "docker"

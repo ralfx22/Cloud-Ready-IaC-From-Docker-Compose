@@ -1,0 +1,111 @@
+```json
+{
+  "k8s": {
+    "namespace": "rrb-microservices",
+    "services": [
+      {
+        "name": "api-gateway",
+        "type": "ClusterIP",
+        "port": 8080,
+        "exposed": true
+      },
+      {
+        "name": "account-api-mongo",
+        "type": "ClusterIP",
+        "port": 27017,
+        "exposed": false
+      },
+      {
+        "name": "asset-management-api-mysql",
+        "type": "ClusterIP",
+        "port": 3306,
+        "exposed": false
+      },
+      {
+        "name": "config-server",
+        "type": "ClusterIP",
+        "port": 8888,
+        "exposed": false
+      },
+      {
+        "name": "discovery-server",
+        "type": "ClusterIP",
+        "port": 8761,
+        "exposed": false
+      },
+      {
+        "name": "grafana",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "notification-api-kafka",
+        "type": "ClusterIP",
+        "port": 9092,
+        "exposed": false
+      },
+      {
+        "name": "prometheus",
+        "type": "ClusterIP",
+        "port": 9090,
+        "exposed": false
+      },
+      {
+        "name": "redis",
+        "type": "ClusterIP",
+        "port": 6379,
+        "exposed": false
+      },
+      {
+        "name": "transaction-api-postgres",
+        "type": "ClusterIP",
+        "port": 5432,
+        "exposed": false
+      },
+      {
+        "name": "zipkin",
+        "type": "ClusterIP",
+        "port": 9411,
+        "exposed": false
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 6,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": [
+      "10.0.1.0/24",
+      "10.0.2.0/24"
+    ],
+    "private_subnets": [
+      "10.0.10.0/24",
+      "10.0.11.0/24"
+    ],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "High-level design: The architecture uses managed EKS with IRSA. A standard AWS Load Balancer Controller will manage Ingress, exposing only the api-gateway (HTTP-only for baseline smoke tests) on port 8080. All other apps remain purely internal.",
+    "Node sizing math: 15 pods total. Memory estimates: account-api (512Mi), account-api-mongo (512Mi), api-gateway (512Mi), asset-management-api (512Mi), asset-management-api-mysql (512Mi), config-server (512Mi), discovery-server (512Mi), grafana (256Mi), notification-api (512Mi), notification-api-kafka (1024Mi), prometheus (512Mi), redis (256Mi), transaction-api (512Mi), transaction-api-postgres (512Mi), zipkin (512Mi). Total ~7168 Mi. A t3.small provides ~1.4 GB (1433 Mi) allocatable memory. 7168 / 1433 = 5.002. Provisioning 6 nodes to ensure scheduling success and handle system overhead.",
+    "Mandatory Add-ons: core EKS add-ons (vpc-cni with before_compute = true, kube-proxy, coredns) are required. Since there are databases, the aws-ebs-csi-driver add-on + IRSA must be provisioned, and a default StorageClass must be present.",
+    "Storage discrepancy: Kompose blindly generated PVCs for `config-server` (/app/resources/config-files) and `prometheus` (/etc/prometheus/prometheus.yml). These are config paths, NOT runtime data. They must be provisioned as ConfigMaps, not PVCs. Proper PVCs will be retained only for Mongo, MySQL, Postgres, and Grafana.",
+    "Kompose Warning (Workload Types): Several API services (e.g., account-api, api-gateway) were output as raw Pods instead of Deployments due to the 'restart: on-failure' compose directive. These must be rewritten as Deployments for reliable operation.",
+    "Kompose Warning (Missing Ports): account-api, asset-management-api, notification-api, and transaction-api have no ports declared, thus no Services generated. They are assumed to be Eureka clients/Kafka consumers that do not receive direct incoming cluster traffic.",
+    "Networking gap (Kafka): Kafka's KAFKA_ADVERTISED_LISTENERS configuration in Compose maps to localhost:9092. This is invalid for Kubernetes and must be updated to map to the 'notification-api-kafka' K8s Service address or Pod IP to allow discovery by other services."
+  ]
+}
+```

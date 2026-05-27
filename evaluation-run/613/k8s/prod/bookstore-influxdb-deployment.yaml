@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-influxdb
+  namespace: bookstore
+  labels:
+    app: bookstore-influxdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore-influxdb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: bookstore-influxdb
+    spec:
+      containers:
+        - name: bookstore-influxdb
+          image: influxdb:1.8
+          ports:
+            - containerPort: 8086
+              protocol: TCP
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "512Mi"
+          volumeMounts:
+            - name: booksture-influxdb-volume
+              mountPath: /var/lib/influxdb
+      restartPolicy: Always
+      volumes:
+        - name: booksture-influxdb-volume
+          persistentVolumeClaim:
+            claimName: booksture-influxdb-volume

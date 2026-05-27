@@ -1,0 +1,850 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-admin
+  namespace: default
+type: Opaque
+stringData:
+  gf_security_admin_user: admin
+  gf_security_admin_password: password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: asset-management-api-mysql-secret
+  namespace: default
+type: Opaque
+stringData:
+  MYSQL_PASSWORD: pwd
+  MYSQL_ROOT_PASSWORD: pwd
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: transaction-api-postgres-secret
+  namespace: default
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: admin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: account-api-mongo-claim0
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: asset-management-api-mysql-claim0
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: config-server-claim0
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-claim0
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: transaction-api-postgres-claim0
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: default
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets:
+              - localhost:9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api-mongo
+  namespace: default
+  labels:
+    app: account-api-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-api-mongo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: account-api-mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6.0.5
+          ports:
+            - containerPort: 27017
+              name: mongo
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: account-api-mongo-claim0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-api-mongo
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: account-api-mongo
+  ports:
+    - name: mongo
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api-mysql
+  namespace: default
+  labels:
+    app: asset-management-api-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-management-api-mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: asset-management-api-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0.33
+          args:
+            - --default-authentication-plugin=mysql_native_password
+          env:
+            - name: MYSQL_DATABASE
+              value: mysql
+            - name: MYSQL_USER
+              value: admin
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: asset-management-api-mysql-secret
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: asset-management-api-mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+              subPath: mysql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: asset-management-api-mysql-claim0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-management-api-mysql
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: asset-management-api-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api-postgres
+  namespace: default
+  labels:
+    app: transaction-api-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-api-postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: transaction-api-postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:15.2
+          env:
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: root
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: transaction-api-postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+              name: postgres
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: transaction-api-postgres-claim0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-api-postgres
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: transaction-api-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: default
+  labels:
+    app: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+    spec:
+      containers:
+        - name: config-server
+          image: ralfx22/rrb-config-server
+          env:
+            - name: spring.profiles.active
+              value: docker
+          ports:
+            - containerPort: 8888
+              name: http
+          volumeMounts:
+            - name: config-files
+              mountPath: /app/resources/config-files
+      volumes:
+        - name: config-files
+          persistentVolumeClaim:
+            claimName: config-server-claim0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: config-server
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-server
+  namespace: default
+  labels:
+    app: discovery-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: discovery-server
+  template:
+    metadata:
+      labels:
+        app: discovery-server
+    spec:
+      containers:
+        - name: discovery-server
+          image: ralfx22/rrb-discovery-server
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+          ports:
+            - containerPort: 8761
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-server
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: discovery-server
+  ports:
+    - name: http
+      port: 8761
+      targetPort: 8761
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: default
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/rrb-api-gateway
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+              value: TRACE
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+          ports:
+            - containerPort: 8080
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: api-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  namespace: default
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-api
+  namespace: default
+  labels:
+    app: account-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-api
+  template:
+    metadata:
+      labels:
+        app: account-api
+    spec:
+      containers:
+        - name: account-api
+          image: ralfx22/rrb-account-api
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-api
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: account-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-management-api
+  namespace: default
+  labels:
+    app: asset-management-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-management-api
+  template:
+    metadata:
+      labels:
+        app: asset-management-api
+    spec:
+      containers:
+        - name: asset-management-api
+          image: ralfx22/rrb-asset-management-api
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-management-api
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: asset-management-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api-kafka
+  namespace: default
+  labels:
+    app: notification-api-kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-api-kafka
+  template:
+    metadata:
+      labels:
+        app: notification-api-kafka
+    spec:
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.4.0
+          env:
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: CLUSTER_ID
+              value: MkU3OEVANTcwNTJENDM2Qk
+            - name: KAFKA_PROCESS_ROLES
+              value: broker,controller
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: PLAINTEXT://localhost:29092,HOST://localhost:9092
+            - name: KAFKA_LISTENERS
+              value: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,HOST://0.0.0.0:9092
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: CONTROLLER
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: 1@localhost:29093
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: PLAINTEXT
+          ports:
+            - containerPort: 9092
+              name: kafka-host
+            - containerPort: 29092
+              name: kafka
+            - containerPort: 29093
+              name: controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-api-kafka
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: notification-api-kafka
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  namespace: default
+  labels:
+    app: notification-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-api
+  template:
+    metadata:
+      labels:
+        app: notification-api
+    spec:
+      containers:
+        - name: notification-api
+          image: ralfx22/rrb-notification-api
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-api
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: notification-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-api
+  namespace: default
+  labels:
+    app: transaction-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-api
+  template:
+    metadata:
+      labels:
+        app: transaction-api
+    spec:
+      containers:
+        - name: transaction-api
+          image: ralfx22/rrb-transaction-api
+          env:
+            - name: spring.profiles.active
+              value: docker
+            - name: spring.cloud.config.uri
+              value: http://config-server:8888/config-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-api
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: transaction-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: default
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.0.11
+          ports:
+            - containerPort: 6379
+              name: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: default
+  labels:
+    app: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:2.24.0
+          ports:
+            - containerPort: 9411
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: zipkin
+  ports:
+    - name: http
+      port: 9411
+      targetPort: 9411
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: default
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.43.0
+          ports:
+            - containerPort: 9090
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.0.1
+          env:
+            - name: gf_security_admin_user
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: gf_security_admin_user
+            - name: gf_security_admin_password
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: gf_security_admin_password
+          ports:
+            - containerPort: 3000
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-claim0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

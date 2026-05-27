@@ -1,0 +1,62 @@
+```json
+{
+  "k8s": {
+    "namespace": "sme-app",
+    "services": [
+      {
+        "name": "quotes",
+        "type": "ClusterIP",
+        "port": 5000,
+        "exposed": false
+      },
+      {
+        "name": "api",
+        "type": "ClusterIP",
+        "port": 3000,
+        "exposed": false
+      },
+      {
+        "name": "frontend",
+        "type": "ClusterIP",
+        "port": 80,
+        "exposed": true
+      }
+    ]
+  },
+  "cluster": {
+    "type": "managed",
+    "flavor": "eks",
+    "version": "1.35",
+    "desired_node_count": 2,
+    "instance_type": "t3.small"
+  },
+  "network": {
+    "vpc_cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.3.0/24", "10.0.4.0/24"],
+    "needs_nat_gateway": true
+  },
+  "ingress": {
+    "enabled": true,
+    "controller": "alb"
+  },
+  "modules": {
+    "vpc_module": "terraform-aws-modules/vpc/aws",
+    "eks_module": "terraform-aws-modules/eks/aws"
+  },
+  "notes": [
+    "Kompose discrepancy: Kompose did NOT generate a Service for 'quotes' because no 'ports' key was specified in Compose. However, the 'api' service references QUOTES_API=http://quotes:5000, so a ClusterIP Service for quotes targeting port 5000 must be created manually in the K8s manifests.",
+    "Kompose warning: 'version' key in Compose is obsolete — informational only, no impact.",
+    "Kompose frontend Service maps port 8080→80; the ALB Ingress will route directly to the frontend Service on port 80 (the container port), so the Kompose Service should be adjusted to expose port 80 rather than 8080 for consistency with the Ingress target, or the Ingress targetPort set accordingly.",
+    "Memory estimates per pod: quotes (Python/Flask on port 5000) ~256 Mi; api (Node.js on port 3000) ~256 Mi; frontend (nginx on port 80) ~128 Mi. Total ~640 Mi.",
+    "Node sizing: 2 × t3.small = 2 × 1.4 GiB allocatable = 2.8 GiB total allocatable. Total pod memory requests ~640 Mi. Two nodes provide headroom and basic availability across AZs.",
+    "All three services are stateless — no volumes, no PVCs, no EBS CSI driver required, no StorageClass needed.",
+    "No HPA defined — metrics-server not required.",
+    "Standard EKS managed add-ons required: vpc-cni (before_compute = true), kube-proxy, coredns.",
+    "AWS Load Balancer Controller required for ALB Ingress. An IAM role via OIDC/IRSA with least-privilege ALB permissions will be provisioned. Public subnets must carry the 'kubernetes.io/role/elb: 1' tag and private subnets 'kubernetes.io/role/internal-elb: 1' for subnet auto-discovery.",
+    "Frontend is the sole externally exposed service via an internet-facing ALB Ingress on HTTP (port 80). TLS/ACM is not required for baseline validation; HTTP-only is sufficient.",
+    "Worker nodes are placed in private subnets; NAT gateway is required for outbound internet access (container image pulls, AWS API calls).",
+    "The QUOTES_API environment variable value 'http://quotes:5000' is valid for Kubernetes in-cluster DNS resolution once the quotes Service exists in the same namespace."
+  ]
+}
+```

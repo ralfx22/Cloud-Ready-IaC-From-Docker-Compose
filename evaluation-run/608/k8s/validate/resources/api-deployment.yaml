@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: microservice-demo
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/md-api
+          args:
+            - serve
+          env:
+            - name: PROJECT_ADDRESS
+              value: project:8081
+            - name: TASK_ADDRESS
+              value: task:8082
+            - name: USER_ADDRESS
+              value: user:8080
+          ports:
+            - containerPort: 50059
+              protocol: TCP
+          resources:
+            requests:
+              memory: 512Mi

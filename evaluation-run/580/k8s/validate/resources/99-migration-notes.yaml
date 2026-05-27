@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: microservice-demo
+data:
+  notes: |-
+    - Namespace created per architecture plan: microservice-demo.
+    - Services are aligned to the plan and kept ClusterIP. Only api-gateway is exposed externally through an ALB Ingress on service port 9090.
+    - Inter-service endpoint variables were corrected to match Kubernetes Service ports from the plan: user:8080, project:8081, task:8082, api:8083. The original Compose values user:50051, project:50052, task:50053, and api:50059 would not work against the rendered Services.
+    - Stateless services user, project, task, api, and api-gateway were converted from Kompose Pods into single-replica Deployments. mongo, mysql, and postgresql were converted into single-replica StatefulSets.
+    - Existing PVC intent was preserved with PVCs for mongodb, mongodb-config, mysqldb, and postgresdb. No storageClassName was set, so a default StorageClass is required for binding.
+    - PostgreSQL uses PGDATA=/var/lib/postgresql/data/pgdata to avoid initialization issues from a freshly formatted volume containing a lost+found directory at the mount root.
+    - fsGroup was added to database pod specs to improve writable volume behavior for containers that may run with non-root database users.
+    - Database health checks from Compose were preserved as readiness/liveness probes only where an exact exec command was evidenced. No application probes were added because no exact probe contract was evidenced for those containers.
+    - Compose depends_on and health-based startup ordering were not translated. Workloads must tolerate dependency startup lag through normal retry behavior.
+    - Secret-like values were moved to a standard Kubernetes Secret: MYSQL_ROOT_PASSWORD, POSTGRES_PASSWORD, and credential-bearing DB_URI values.
+    - Unresolved build/artifact issue: user, project, task, and api originated from local Compose build contexts. These manifests assume the declared images ralfx22/md-user, ralfx22/md-project, ralfx22/md-task, and ralfx22/md-api are available to the cluster and support linux/amd64.
+    - Unresolved build/artifact issue: api-gateway used pull_policy: never in Compose. Kubernetes does not preserve that behavior directly; normal image pull behavior is used.
+    - Kompose warning recorded: Compose version key was reported as obsolete.
+    - Kompose warning recorded: named-volume path inspection warnings were emitted for /data/db, /data/configdb, /var/lib/mysql, and /var/lib/postgresql/data. These were treated as volume inspection limitations rather than host-path requirements.
+    - AWS/EKS baseline assumption from the architecture plan: aws-load-balancer-controller must be installed for the Ingress to provision an ALB, and aws-ebs-csi-driver plus a default StorageClass must be available for PVC-backed storage.

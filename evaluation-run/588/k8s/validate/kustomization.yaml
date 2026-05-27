@@ -1,0 +1,10 @@
+namespace: ns-588
+resources:
+  - resources/00-namespace.yaml
+  - resources/01-config.yaml
+  - resources/02-persistentvolumeclaims.yaml
+  - resources/03-services.yaml
+  - resources/04-statefulsets.yaml
+  - resources/05-deployments.yaml
+  - resources/06-ingress.yaml
+  - resources/07-migration-notes.yaml

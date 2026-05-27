@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    === Migration Notes ===
+
+    1. PODS CONVERTED TO DEPLOYMENTS:
+       - account-api, api-gateway, asset-management-api, discovery-server,
+         notification-api, transaction-api were generated as bare Pods by Kompose
+         because they lacked explicit 'ports' or had restart:on-failure.
+         All converted to Deployments with ClusterIP Services for reliability.
+
+    2. VOLUME MOUNT PATH CORRECTIONS:
+       - account-api-mongo: /data/mongo -> /data/db (standard MongoDB data directory)
+       - asset-management-api-mysql: /data/mysql -> /var/lib/mysql (standard MySQL data directory)
+       - transaction-api-postgres: /data/postgres -> /var/lib/postgresql/data (standard Postgres data directory)
+       - Postgres PGDATA set to /var/lib/postgresql/data/pgdata to avoid lost+found conflicts on EBS volumes
+       - MySQL --ignore-db-dir=lost+found added to handle lost+found on freshly formatted EBS volumes
+
+    3. CONFIG-SERVER VOLUME (GAP):
+       - Compose mounted ./config-files:/app/resources/config-files from host.
+       - This is configuration data, not persistent storage. The PVC (config-server-claim0) has been dropped.
+       - ASSUMPTION: config files are baked into the container image (ralfx22/rrb-config-server).
+       - If config files need to be provided externally, create a ConfigMap with the file contents
+         and mount it at /app/resources/config-files.
+
+    4. PROMETHEUS CONFIGURATION (GAP):
+       - Compose bind-mounted ./prometheus-configuration.yml:/etc/prometheus/prometheus.yml.
+       - The source file was not available. A placeholder ConfigMap with reasonable defaults
+         has been created targeting Spring Boot Actuator prometheus endpoints.
+       - Review and update prometheus-config ConfigMap with actual scrape configuration.
+
+    5. KAFKA NETWORKING FIXES:
+       - KAFKA_CONTROLLER_QUORUM_VOTERS changed from 1@notification-api-kafka:29093 to 1@localhost:29093
+         because controller and broker run in the same pod (KRaft single-node mode).
+       - KAFKA_LISTENERS bind addresses changed to 0.0.0.0 for all listeners so they are
+         reachable within the pod network.
+       - Kafka Service now exposes both port 9092 (HOST listener) and 29092 (PLAINTEXT listener).
+       - Kafka clients (notification-api, transaction-api) should connect via
+         notification-api-kafka:29092 (PLAINTEXT listener).
+
+    6. DUPLICATE SERVICE PORTS:
+       - Kompose generated duplicate ports (e.g., "27017" and "27017-tcp") on several services.
+         All duplicates have been removed.
+
+    7. SECRETS:
+       - MySQL credentials (MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD)
+         moved to Secret asset-management-api-mysql-secret.
+       - Postgres credentials (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+         moved to Secret transaction-api-postgres-secret.
+       - Grafana admin credentials moved to Secret grafana-secret.
+       - WARNING: Secret values are stored as stringData (base64-encoded on apply).
+         In production, use a proper secrets management solution.
+
+    8. GRAFANA ENVIRONMENT VARIABLES:
+       - Compose used lowercase gf_security_admin_user / gf_security_admin_password.
+         Grafana expects uppercase GF_SECURITY_ADMIN_USER / GF_SECURITY_ADMIN_PASSWORD.
+         Corrected in the deployment.
+
+    9. INGRESS:
+       - ALB Ingress created for api-gateway (the only exposed service) on HTTP port 80.
+       - No TLS/ACM certificate configured; HTTP-only for baseline validation.
+       - healthcheck-path set to /actuator/health (Spring Boot default).
+       - Requires AWS Load Balancer Controller to be installed in the cluster.
+
+    10. STORAGE:
+        - PVCs created without explicit storageClassName to use cluster default.
+        - Requires EBS CSI driver add-on and a default StorageClass (e.g., gp3).
+        - PVC sizes set to 1Gi (adjust as needed for production).
+
+    11. fsGroup SETTINGS:
+        - Grafana: fsGroup 472 (grafana user group)
+        - Prometheus: fsGroup 65534 (nobody group, used by prom/prometheus image)
+        - Postgres: fsGroup 999 (postgres group in official image)
+
+    12. PROBES:
+        - No probes added. While Spring Boot apps likely expose /actuator/health,
+          this is not explicitly evidenced for all services. Probes should be added
+          after verifying each service's health endpoint.
+
+    13. NO BUILD CONTEXTS:
+        - All services use pre-built images from Docker Hub (ralfx22/* or official images).
+          No unresolved build/artifact issues.
+
+    14. ALL SERVICES ARE ClusterIP:
+        - Per architecture plan, only api-gateway is exposed (via ALB Ingress).
+          All other services are internal ClusterIP.

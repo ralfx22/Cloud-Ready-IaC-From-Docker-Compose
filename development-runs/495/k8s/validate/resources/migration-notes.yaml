@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - All Services are ClusterIP. Public validation entrypoint is provided only through ALB Ingress for api-gateway on port 8080.
+    - Replaced Kompose-generated standalone Pods with Deployments for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api to provide controller-managed workloads suitable for clean-cluster apply.
+    - No probes were included because no exact probe paths/commands were evidenced in source inputs.
+    - account-api, asset-management-api, notification-api, and transaction-api still have no Service objects because the architecture plan did not define them as routable services and Kompose reported they had no ports. This remains a functional gap if other workloads require stable DNS access to these applications.
+    - account-api-mongo PVC mount corrected from /data/mongo to /data/db to match MongoDB runtime data directory.
+    - asset-management-api-mysql PVC mount corrected from /data/mysql to /var/lib/mysql. Used subPath mysql-data to avoid mount-root lost+found issues on fresh volumes.
+    - transaction-api-postgres PVC mount corrected from /data/postgres to /var/lib/postgresql/data. Used subPath pgdata to avoid mount-root lost+found issues on fresh volumes.
+    - Added fsGroup for MySQL and PostgreSQL and Grafana persistent-volume use to improve write permissions for non-root or image-defined users.
+    - config-server volume mount /app/resources/config-files was removed. Source host path was missing/unsupported and plan classifies it as config-like rather than baseline persistent runtime storage. If the image requires external config files, they must be baked into the image or supplied later as a ConfigMap.
+    - prometheus volume mount /etc/prometheus/prometheus.yml was removed. Source file was missing/unsupported and plan classifies it as config-like rather than PVC-backed runtime data. Prometheus may fail to start unless its image already contains a valid configuration.
+    - Removed unused PVC manifests for config-server and prometheus because their mounts represented config paths, not baseline persistent storage.
+    - Converted plaintext database and Grafana credentials into Kubernetes Secrets while preserving env wiring.
+    - Kafka networking was corrected for single-pod Kubernetes safety. Removed localhost external advertised HOST listener and rewrote controller quorum/bind to pod-local addressing. Service remains only on 9092.
+    - Kafka image/runtime behavior may still require additional KRaft-specific environment variables or storage configuration depending on upstream image expectations; validate container startup logs.
+    - ALB Ingress is HTTP-only per baseline plan. No TLS certificate annotation was added because no ACM ARN or domain requirement was provided.
+    - Ingress health/auth special path was not added because no authenticated entrypoint behavior was evidenced for api-gateway.
+    - Compose version field was obsolete according to Kompose warning.
+    - Kompose warnings recorded: unsupported/missing host bind mount source paths for account-api-mongo data, asset-management-api-mysql data, config-files, grafana data, prometheus configuration, and transaction-api-postgres data.
+    - Unresolved artifact/build issue: application images ralfx22/rrb-account-api, ralfx22/rrb-api-gateway, ralfx22/rrb-asset-management-api, ralfx22/rrb-config-server, ralfx22/rrb-discovery-server, ralfx22/rrb-notification-api, and ralfx22/rrb-transaction-api must exist and be pullable by the cluster.
+    - Unresolved runtime issue: internal application configuration for database hosts, Kafka bootstrap servers, Eureka, Redis, Zipkin, and other inter-service endpoints is not fully evidenced in the provided manifests and may rely on image-baked defaults or Spring Config Server content.
+    - Capacity note from architecture plan: baseline 4 x t3.small node sizing may still be insufficient if realistic Java memory requests are later added for all workloads.

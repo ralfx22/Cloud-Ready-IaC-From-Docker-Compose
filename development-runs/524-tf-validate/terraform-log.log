@@ -1,0 +1,53 @@
+=== terraform fmt ===
+main.tf
+=== terraform init ===
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.20.0 for eks...
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.6.1 for vpc...
+
+Error: Failed to download module
+
+  on main.tf line 44:
+  44: module "vpc" {
+
+Could not download module "vpc" (main.tf:44) source code from
+"git::https://github.com/terraform-aws-modules/terraform-aws-vpc?ref=3ffbd46fb1c7733e1b34d8666893280454e27436":
+error downloading
+'https://github.com/terraform-aws-modules/terraform-aws-vpc?ref=3ffbd46fb1c7733e1b34d8666893280454e27436':
+/usr/bin/git exited with 128: Cloning into '.terraform/modules/vpc'...
+fatal: unable to access
+'https://github.com/terraform-aws-modules/terraform-aws-vpc/': Could not
+resolve host: github.com
+.
+
+Error: Failed to download module
+
+  on main.tf line 74:
+  74: module "eks" {
+
+Could not download module "eks" (main.tf:74) source code from
+"git::https://github.com/terraform-aws-modules/terraform-aws-eks?ref=2d63f1fe283a9a00b2b9d6befced1cd324bf9217":
+error downloading
+'https://github.com/terraform-aws-modules/terraform-aws-eks?ref=2d63f1fe283a9a00b2b9d6befced1cd324bf9217':
+/usr/bin/git exited with 128: Cloning into '.terraform/modules/eks'...
+fatal: unable to access
+'https://github.com/terraform-aws-modules/terraform-aws-eks/': Could not
+resolve host: github.com
+.
+=== terraform validate ===
+
+Error: Module not installed
+
+  on main.tf line 44:
+  44: module "vpc" {
+
+This module is not yet installed. Run "terraform init" to install all modules
+required by this configuration.
+
+Error: Module not installed
+
+  on main.tf line 74:
+  74: module "eks" {
+
+This module is not yet installed. Run "terraform init" to install all modules
+required by this configuration.

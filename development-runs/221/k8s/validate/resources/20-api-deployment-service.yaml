@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: app
+  labels:
+    io.kompose.service: api
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-221.yml -o k8s-221/
+    kompose.version: "1.34.0 (cbf2835db)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: api
+  template:
+    metadata:
+      labels:
+        io.kompose.service: api
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose-221.yml -o k8s-221/
+        kompose.version: "1.34.0 (cbf2835db)"
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/sme-api:latest
+          env:
+            - name: QUOTES_API
+              value: http://quotes:5000
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: app
+  labels:
+    io.kompose.service: api
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-221.yml -o k8s-221/
+    kompose.version: "1.34.0 (cbf2835db)"
+spec:
+  type: ClusterIP
+  selector:
+    io.kompose.service: api
+  ports:
+    - name: "3000"
+      port: 3000
+      targetPort: 3000

@@ -1,0 +1,195 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: user
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: user
+    spec:
+      containers:
+        - name: user
+          image: ralfx22/md-user
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: user-db-uri
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: user-db-name
+          ports:
+            - containerPort: 50051
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: project
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: project
+    spec:
+      containers:
+        - name: project
+          image: ralfx22/md-project
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: microservice-demo-secrets
+                  key: project-db-uri
+          ports:
+            - containerPort: 50052
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: task
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: task
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: task
+    spec:
+      containers:
+        - name: task
+          image: ralfx22/md-task
+          imagePullPolicy: IfNotPresent
+          command:
+            - ./init
+          env:
+            - name: USER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: task-user-address
+            - name: PROJECT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: task-project-address
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: microservice-demo-secrets
+                  key: task-db-uri
+          ports:
+            - containerPort: 50053
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+    spec:
+      containers:
+        - name: api
+          image: ralfx22/md-api
+          imagePullPolicy: IfNotPresent
+          args:
+            - serve
+          env:
+            - name: USER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: api-user-address
+            - name: PROJECT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: api-project-address
+            - name: TASK_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: api-task-address
+          ports:
+            - containerPort: 50059
+              protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: microservice-demo
+  labels:
+    app.kubernetes.io/name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: ralfx22/md-api
+          imagePullPolicy: IfNotPresent
+          args:
+            - proxy
+          env:
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: api-gateway-host
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: api-gateway-port
+            - name: PROXY_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: microservice-demo-config
+                  key: api-gateway-proxy-port
+          ports:
+            - containerPort: 9090
+              protocol: TCP

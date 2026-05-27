@@ -1,0 +1,40 @@
+=== terraform fmt ===
+=== terraform init ===
+Initializing modules...
+
+Error: Error accessing remote module registry
+
+  on main.tf line 39:
+  39: module "vpc" {
+
+Failed to retrieve available versions for module "vpc" (main.tf:39) from
+registry.terraform.io: failed to request discovery document: Get
+"https://registry.terraform.io/.well-known/terraform.json": dial tcp: lookup
+registry.terraform.io on 127.0.0.11:53: server misbehaving.
+
+Error: Error accessing remote module registry
+
+  on main.tf line 64:
+  64: module "eks" {
+
+Failed to retrieve available versions for module "eks" (main.tf:64) from
+registry.terraform.io: failed to request discovery document: Get
+"https://registry.terraform.io/.well-known/terraform.json": dial tcp: lookup
+registry.terraform.io on 127.0.0.11:53: server misbehaving.
+=== terraform validate ===
+
+Error: Module not installed
+
+  on main.tf line 39:
+  39: module "vpc" {
+
+This module is not yet installed. Run "terraform init" to install all modules
+required by this configuration.
+
+Error: Module not installed
+
+  on main.tf line 64:
+  64: module "eks" {
+
+This module is not yet installed. Run "terraform init" to install all modules
+required by this configuration.

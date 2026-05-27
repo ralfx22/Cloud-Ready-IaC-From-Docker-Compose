@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: wger
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: wger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+      app.kubernetes.io/part-of: wger
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: web
+        app.kubernetes.io/part-of: wger
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: web
+          image: docker.io/wger/server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: wger-env
+            - secretRef:
+                name: wger-env-secret
+          volumeMounts:
+            - name: static-data
+              mountPath: /home/wger/static
+            - name: media-data
+              mountPath: /home/wger/media
+      volumes:
+        - name: static-data
+          persistentVolumeClaim:
+            claimName: static-data
+        - name: media-data
+          persistentVolumeClaim:
+            claimName: media-data

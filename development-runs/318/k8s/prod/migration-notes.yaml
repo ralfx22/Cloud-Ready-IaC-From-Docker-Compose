@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: sme-app
+data:
+  notes: |-
+    Migration summary and assumptions for sme-app:
+
+    - Created dedicated Namespace: sme-app.
+    - Kompose omitted a Service for 'quotes' because no ports were declared in the Compose file. The application (api) expects QUOTES_API at http://quotes:5000, so a ClusterIP Service 'quotes' on port 5000 was added to restore internal DNS-based discovery.
+    - Frontend and API Deployments preserved from Kompose. Added containerPort 5000 to the quotes Deployment to reflect the API expectation.
+    - Services 'api' (3000), 'frontend' (8080), and 'quotes' (5000) created as ClusterIP per plan. The frontend Service remains ClusterIP and is exposed externally via an ALB Ingress.
+    - An Ingress resource was added for the frontend with ingressClassName: "alb" and common ALB annotations (internet-facing, target-type: ip, HTTP listener on 80). Host set to example.com for validation; replace with real host if available.
+    - Probes were omitted from Deployments because none were explicitly evidenced in the input. If liveness/readiness/startup probes are required, add exact probe definitions (path/port or exec) after validation.
+    - No PersistentVolumeClaims were detected or created beyond the above. No storageClassName was set.
+    - No CRDs are required by these manifests. AWS Load Balancer Controller (ALB) must be installed separately in the cluster to satisfy the Ingress.
+    - Kompose warnings from conversion:
+      * "version is obsolete" — docker-compose file version is older/obsolete.
+      * "Service \"quotes\" won't be created because 'ports' is not specified" — addressed by adding the quotes Service.
+
+    - Items intentionally left for operator:
+      * TLS/certificate management for the Ingress (ACM integration / cert-manager) was not configured here.
+      * Nodegroup, IAM roles, and AWS controllers must be provisioned separately (e.g., Load Balancer Controller for ALB).
+
+    Apply order suggestion: kubectl apply -f k8s/sme-namespace.yaml && kubectl apply -f k8s/ (or apply all manifests together).

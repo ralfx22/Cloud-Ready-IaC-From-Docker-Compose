@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotes
+  namespace: sme-app
+  labels:
+    app: quotes
+    io.kompose.service: quotes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quotes
+  template:
+    metadata:
+      labels:
+        app: quotes
+        io.kompose.service: quotes
+    spec:
+      containers:
+        - name: quotes
+          image: ralfx22/sme-quotes:latest
+          # Assumed internal listening port: 5000 (inferred from QUOTES_API env in api service)
+          ports:
+            - containerPort: 5000
+              protocol: TCP

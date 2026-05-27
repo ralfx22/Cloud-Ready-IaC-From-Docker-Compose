@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: rrb-microservices
+data:
+  prometheus.yml: |
+    # Placeholder for prometheus configuration
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-server-files
+  namespace: rrb-microservices
+data:
+  README.md: "Placeholder for config files"

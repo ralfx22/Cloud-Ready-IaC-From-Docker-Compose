@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-notes
+  namespace: rrb-app
+  labels:
+    app.kubernetes.io/name: migration-notes
+data:
+  notes: |
+    - Namespace set to rrb-app per architecture plan.
+    - Replaced Kompose-generated standalone Pods for account-api, api-gateway, asset-management-api, discovery-server, notification-api, and transaction-api with Deployments for safer reconciliation and restart behavior.
+    - Added Service for api-gateway and ALB Ingress as the single public validation entrypoint. Ingress is HTTP-only and internet-facing per plan.
+    - All other Services remain ClusterIP only.
+    - Removed duplicate Service port entries emitted by Kompose for some Services.
+    - Probes omitted intentionally because no exact probe path/port/exec was evidenced in inputs.
+    - Converted embedded sensitive env values to Secrets for MySQL, PostgreSQL, and Grafana.
+    - Converted MongoDB, MySQL, and PostgreSQL workloads to StatefulSets as low-risk stateful workloads per plan.
+    - Corrected database persistence mount paths to image-standard runtime directories:
+      * MongoDB: /data/db instead of /data/mongo
+      * MySQL: /var/lib/mysql instead of /data/mysql
+      * PostgreSQL: /var/lib/postgresql/data instead of /data/postgres
+    - Retained Grafana persistence at /var/lib/grafana via PVC.
+    - Removed PVC usage for config-server because /app/resources/config-files is config-like, not persistent runtime data, and source files were missing.
+    - Removed PVC usage for Prometheus because the Compose mount targeted a config file path, not persistent runtime data, and source file was missing.
+    - No ConfigMap for config-server or Prometheus content was created because referenced source files were unavailable.
+    - Kafka listener configuration was corrected for Kubernetes-safe internal addressing. Removed Docker-specific HOST://localhost:9092 advertised listener and used service DNS notification-api-kafka:9092.
+    - Kafka remains ephemeral because no persistence was declared in plan.
+    - Redis and Zipkin remain ephemeral because no persistence was declared in plan.
+    - Application services account-api, asset-management-api, notification-api, and transaction-api still have no Services because no ports were evidenced from Compose/Kompose; baseline keeps them internal and not directly reachable.
+    - Compose/Kompose warnings recorded:
+      * Docker Compose version field marked obsolete.
+      * Host bind mounts unsupported and source paths missing for account-api-mongo, asset-management-api-mysql, config-server, grafana, prometheus, and transaction-api-postgres.
+      * Services account-api, asset-management-api, notification-api, and transaction-api were not created by Kompose because ports were not specified.

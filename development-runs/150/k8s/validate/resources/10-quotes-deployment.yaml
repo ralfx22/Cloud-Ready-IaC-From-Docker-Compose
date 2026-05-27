@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quotes
+  namespace: app
+  labels:
+    io.kompose.service: quotes
+    app: quotes
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose-150.yml -o k8s-150/
+    kompose.version: "1.34.0 (cbf2835db)"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quotes
+  template:
+    metadata:
+      labels:
+        io.kompose.service: quotes
+        app: quotes
+    spec:
+      containers:
+        - name: quotes
+          image: ralfx22/sme-quotes:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+      restartPolicy: Always

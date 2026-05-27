@@ -1,0 +1,26 @@
+version: '2'
+services:
+  quotes:
+    build:
+      context: ./QuoteService
+      dockerfile: app.dockerfile
+    image: ralfx22/sme-quotes:eks
+  api:
+    build:
+      context: ./ApiGateway
+      dockerfile: app.dockerfile
+    image: ralfx22/sme-api:eks
+    environment:
+      - "QUOTES_API=http://quotes:5000"
+    depends_on:
+      - quotes
+    ports:
+      - "3000:3000"
+  frontend:
+    build:
+      context: ./FrontendApplication
+      dockerfile: app.dockerfile
+    image: ralfx22/sme-frontend:eks-2026-01-05-v2
+    ports:
+      - "8080:80"
+    

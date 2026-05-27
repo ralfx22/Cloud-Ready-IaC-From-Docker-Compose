@@ -1,0 +1,12 @@
+namespace: ns-517
+resources:
+  - resources/00-namespace.yaml
+  - resources/10-api-config.yaml
+  - resources/20-api-deployment.yaml
+  - resources/21-api-service.yaml
+  - resources/30-frontend-deployment.yaml
+  - resources/31-frontend-service.yaml
+  - resources/32-frontend-ingress.yaml
+  - resources/40-quotes-deployment.yaml
+  - resources/41-quotes-service.yaml
+  - resources/99-migration-notes.yaml

@@ -1,0 +1,11 @@
+namespace: ns-543
+resources:
+  - resources/api-deployment.yaml
+  - resources/api-service.yaml
+  - resources/frontend-deployment.yaml
+  - resources/frontend-ingress.yaml
+  - resources/frontend-service.yaml
+  - resources/migration-notes.yaml
+  - resources/namespace.yaml
+  - resources/quotes-deployment.yaml
+  - resources/quotes-service.yaml
