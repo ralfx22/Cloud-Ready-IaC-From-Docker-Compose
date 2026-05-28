@@ -94,13 +94,14 @@ All output lands in `/data/shared/{executionId}/` inside the container.
 
 ## Repository layout
 
-```
+```text
 .
 ├── development-runs/    # Execution artifacts from workflow development
 ├── evaluation-reports/  # Per-application evaluation reports
 ├── evaluation-runs/     # Execution artifacts from the formal evaluation
 ├── n8n-deployment/      # Docker Compose stack to run n8n locally
-└── n8n-workflows/       # n8n workflow JSON files (import these into n8n)
+├── n8n-workflows/       # n8n workflow JSON files (import these into n8n)
+└── system-prompts/      # System prompts for each of the three pipeline agents
 ```
 
 ### `evaluation-reports/`
@@ -154,3 +155,7 @@ The shared volume (`/data/shared/{executionId}/`) is where the workflow writes a
 | --- | --- |
 | `GenerationOfCloudReadyIaCFromDockerCompose.json` | Main three-agent pipeline (Architecture Agent → Kubernetes Agent → Terraform Agent) |
 | `terraform_validate.json` | Standalone `terraform validate` repair-loop sub-workflow |
+
+### `system-prompts/`
+
+Agent configuration files for the three pipeline agents. Each file has the system prompt, the user prompt template (with n8n expressions that inject runtime data), and the expected output schema. The Terraform agent file also includes tool definitions and the repair-loop iteration limit.
