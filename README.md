@@ -26,8 +26,17 @@ k3d kubeconfig get thesis > /your/path/n8n/kubeconfig/k3d.yaml
 
 ### 2. Start n8n
 
+Copy the two files that define the custom n8n image to the machine where you want to run it, or run from the cloned repository:
+
 ```bash
-cd n8n-deployment
+cp n8n-deployment/Dockerfile      /your/deploy/dir/
+cp n8n-deployment/docker-compose.yaml /your/deploy/dir/
+```
+
+Then start the stack:
+
+```bash
+cd n8n-deployment   # or cd /your/deploy/dir if you copied above
 docker compose up --build -d
 ```
 
@@ -55,7 +64,7 @@ curl -X POST http://localhost:5678/webhook/compose-to-k8s \
 The pipeline then:
 
 1. Runs Kompose to generate a baseline manifest set.
-2. Calls the Architecture Agent to analyse the Compose services.
+2. Calls the Architecture Agent to analyze the Compose services.
 3. Calls the Kubernetes Agent to produce refined manifests.
 4. Calls the Terraform Agent to generate AWS/EKS infrastructure code.
 5. Runs `terraform validate` and loops up to five times to fix any errors.
@@ -69,7 +78,7 @@ All output lands in `/data/shared/{executionId}/` inside the container.
 ### Evaluation applications (Chapter 7)
 
 | Application | Original repository | Fork used in thesis |
-|-------------|--------------------|--------------------|
+| --- | --- | --- |
 | wger Workout Manager | [wger-project/docker](https://github.com/wger-project/docker) | — |
 | Microservice Demo | [Joker666/microservice-demo](https://github.com/Joker666/microservice-demo) | [ralfx22/microservice-demo](https://github.com/ralfx22/microservice-demo) |
 | BookStoreApp Distributed | [devdcores/BookStoreApp-Distributed-Application](https://github.com/devdcores/BookStoreApp-Distributed-Application) | [ralfx22/BookStoreApp-Distributed-Application](https://github.com/ralfx22/BookStoreApp-Distributed-Application) |
@@ -88,17 +97,32 @@ All output lands in `/data/shared/{executionId}/` inside the container.
 ```
 .
 ├── development-runs/    # Execution artifacts from workflow development
-├── evaluation-run/      # Execution artifacts from the formal evaluation
+├── evaluation-reports/  # Per-application evaluation reports
+├── evaluation-runs/     # Execution artifacts from the formal evaluation
 ├── n8n-deployment/      # Docker Compose stack to run n8n locally
 └── n8n-workflows/       # n8n workflow JSON files (import these into n8n)
 ```
+
+### `evaluation-reports/`
+
+One Markdown report per evaluated application, written after the formal evaluation runs were complete. Each report documents the application's complexity tier, its service stack, notable Kubernetes/EKS constraints discovered during the run, and a per-model assessment of how well the pipeline handled those constraints.
+
+| File | Application | Complexity tier |
+| --- | --- | --- |
+| `BSA-report.md` | BookStoreApp Distributed (devdcores) | Complex |
+| `MD-report.md` | Microservice Demo (Joker666) | Intermediate |
+| `RRB-report.md` | Royal Reserve Bank (regression baseline) | Intermediate |
+| `SME-report.md` | Simple Microservice Example (regression baseline) | Simple |
+| `wger-report.md` | wger Workout Manager | Simple |
+
+---
 
 ### `development-runs/`
 
 Every n8n execution triggered while the workflow was still being designed and hardened (SME phase with `kasvith/simple-microservice-example`, RRB phase with `zoltanvin/royal-reserve-bank`). Each numbered subdirectory corresponds to one n8n execution and contains:
 
 | Path | Content |
-|------|---------|
+| --- | --- |
 | `docker-compose.yml` | The input Compose file that was submitted |
 | `kompose/` | Raw Kompose output (deterministic baseline) |
 | `k8s/` | LLM-refined Kubernetes manifests |
@@ -108,7 +132,7 @@ Every n8n execution triggered while the workflow was still being designed and ha
 
 Directories suffixed with `-tf-validate` (e.g. `206-tf-validate`) are repair-loop iterations triggered by a failing `terraform validate`. Up to five iterations were allowed per execution. Because each iteration is a separate n8n execution, its number is always higher than the main run that spawned it.
 
-### `evaluation-run/`
+### `evaluation-runs/`
 
 Executions from the formal evaluation (Chapter 7 of the thesis). All runs here used the same frozen final version of the workflow. The per-run directory structure is the same as `development-runs/`. Three microservice applications were evaluated, each submitted to every LLM backend multiple times.
 
@@ -127,6 +151,6 @@ The shared volume (`/data/shared/{executionId}/`) is where the workflow writes a
 ### `n8n-workflows/`
 
 | File | Workflow |
-|------|---------|
+| --- | --- |
 | `GenerationOfCloudReadyIaCFromDockerCompose.json` | Main three-agent pipeline (Architecture Agent → Kubernetes Agent → Terraform Agent) |
 | `terraform_validate.json` | Standalone `terraform validate` repair-loop sub-workflow |
